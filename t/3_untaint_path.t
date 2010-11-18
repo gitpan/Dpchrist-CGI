@@ -1,42 +1,79 @@
 #######################################################################
-# test script for untaint_path
+# $Id: 3_untaint_path.t,v 1.5 2010-11-18 22:52:58 dpchrist Exp $
 #
-# Copyright 2006 by David Paul Christensen <dpchrist@holgerdanske.com>
+# Test script for Dpchrist::CGI::untaint_path().
+#
+# Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use Test::More tests => 5;
+use 5.010;
+use strict;
+use warnings;
 
+use Test::More tests			=> 4;
+
+use Dpchrist::CGI			qw( untaint_path );
+
+use Capture::Tiny			qw ( capture );
+use Carp;
 use Data::Dumper;
-$Data::Dumper::Sortkeys = 1;
 
-use Dpchrist::CGI qw(:all);
+$|					= 1;
+$Data::Dumper::Sortkeys			= 1;
 
-$| = 1;
+my ($r, @r, $s);
+my ($stdout, $stderr);
 
-ok(!defined untaint_path(undef));				#  1
+$r = eval {
+    untaint_path;
+};
+ok(								#     1
+    !$@
+    && !defined $r,
+    'call without arguments in scalar context should return'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
+);
 
-my @a = (undef, undef, undef);
-my @b = untaint_path(@a);
-if (!defined $b[0] && !defined $b[1] && !defined $b[2]) {
-    ok(1);							#  2
-}
-else {
-    warn join ' ', __FILE__, __LINE__,
-	Data::Dumper->Dump([\@a, \@b], [qw(*a *b)]);
-}
+($stdout, $stderr) = capture {
+    $r = eval {
+	untaint_path undef;
+    };
+};
+ok(								#     2
+    !$@
+    && !defined($r)
+    && $stderr,
+    'call on undef should return undef ' .
+    'and generate warning'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $r, $stderr], [qw(@ r stderr)]),
+);
 
-ok(untaint_path('foo/bar.baz') eq 'foo/bar.baz');		#  3
+$r = eval {
+    $s = join ' ', __FILE__, __LINE__;
+    untaint_path $s;
+};
+ok(								#     3
+    !$@
+    && $r
+    && $r eq $s,
+    'call on string should return string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+);
 
-@a = ('foo', 'bar', 'baz');
-@b = untaint_path(@a);
-if ($a[0] eq $b[0] && $a[1] eq $b[1] && $a[2] eq $b[2]) {
-    ok(1);							#  4
-}
-else {
-    warn join ' ', __FILE__, __LINE__,
-	Data::Dumper->Dump([\@a, \@b], [qw(*a *b)]);
-}
+$r = eval {
+    $s = join ' ', __FILE__, __LINE__;
+    untaint_path "\x00" . $s . "\x00";
+};
+ok(								#     4
+    !$@
+    && $r
+    && $r eq $s,
+    'call on string with leading and training nulls ' .
+    'should return string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+);
 
-ok(!untaint_path("\x00"));					#  5
-
-#######################################################################

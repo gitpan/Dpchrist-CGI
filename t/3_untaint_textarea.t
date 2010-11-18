@@ -1,40 +1,87 @@
 #######################################################################
-# test script for untaint_textarea
+# $Id: 3_untaint_textarea.t,v 1.2 2010-11-18 22:52:58 dpchrist Exp $
 #
-# Copyright 2006 by David Paul Christensen <dpchrist@holgerdanske.com>
+# Test script for Dpchrist::CGI::untaint_textarea().
+#
+# Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use Test::More tests => 4;
+use 5.010;
+use strict;
+use warnings;
 
+use Test::More tests			=> 4;
+
+use Dpchrist::CGI			qw( untaint_textarea );
+
+use Capture::Tiny			qw ( capture );
+use Carp;
 use Data::Dumper;
-$Data::Dumper::Sortkeys = 1;
 
-use Dpchrist::CGI qw(:all);
+$|					= 1;
+$Data::Dumper::Sortkeys			= 1;
 
-$| = 1;
+my ($r, @r, $s);
+my ($stdout, $stderr);
 
-ok(!defined untaint_textarea(undef));				#  1
+my $bad;
 
-my @a = (undef, undef, undef);
-my @b = untaint_textarea(@a);
-if (!defined $b[0] && !defined $b[1] && !defined $b[2]) {
-    ok(1);							#  2
+for (my $i = 0; $i < 32; $i++) {
+    next if $i == 10 || $i == 13;
+    $bad .= chr($i);
 }
-else {
-    warn join ' ', __FILE__, __LINE__,
-	Data::Dumper->Dump([\@a, \@b], [qw(*a *b)]);
-}
+$bad .= chr(127);
 
-ok(untaint_textarea('foo') eq 'foo');				#  3
+$r = eval {
+    untaint_textarea;
+};
+ok(								#     1
+    !$@
+    && !defined $r,
+    'call without arguments should return undef'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
+);
 
-@a = ('foo\n', 'bar', 'baz');
-@b = untaint_textarea(@a);
-if ($a[0] eq $b[0] && $a[1] eq $b[1] && $a[2] eq $b[2]) {
-    ok(1);							#  4
-}
-else {
-    warn join ' ', __FILE__, __LINE__,
-	Data::Dumper->Dump([\@a, \@b], [qw(*a *b)]);
-}
+($stdout, $stderr) = capture {
+    $r = eval {
+	untaint_textarea undef;
+    };
+};
+ok(								#     2
+    !$@
+    && !defined($r)
+    && $stderr,
+    'call on undef should return undef ' .
+    'and generate warning'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $r, $stderr], [qw(@ r stderr)]),
+);
 
-#######################################################################
+$r = eval {
+    $s = join ' ', __FILE__, __LINE__;
+    untaint_textarea $s;
+};
+ok(								#     3
+    !$@
+    && $r
+    && $r eq $s,
+    'call on string should return string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+);
+
+$r = eval {
+    $s = join ' ', __FILE__, __LINE__, "\r\n";
+    untaint_textarea $bad . $s . $bad;
+};
+ok(								#     4
+    !$@
+    && $r
+    && $r eq $s,
+    'call on string with leading and trailing control characters ' .
+    'should return string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+);
+

@@ -1,7 +1,10 @@
+#! /usr/bin/perl -T
 #######################################################################
-# test script for dump_cookies
+# $Id: 3_dump_cookies.t,v 1.2 2010-11-17 21:35:16 dpchrist Exp $
 #
-# Copyright 2006 by David Paul Christensen <dpchrist@holgerdanske.com>
+# Test script for Dpchrist::CGI::dump_cookies().
+#
+# Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
 use Test::More tests => 1;

@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.6 2010-11-16 05:28:51 dpchrist Exp $
+# $Id: Makefile.PL,v 1.9 2010-11-18 22:52:58 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -25,8 +25,6 @@ use Dpchrist::Module::MakefilePL (
     -mcpani		=> $ENV{CPAN_AUTHORID},
     -pod2html	 	=> [qw(
 	lib/Dpchrist/CGI.pm
-	lib/Dpchrist/CGI/Widget.pm
-	lib/Dpchrist/CGI/Widget/Checkbox.pm
     )],
     -release		=> $ENV{RELEASE_ROOT},
 );
@@ -40,12 +38,13 @@ WriteMakefile(
 	'Dpchrist::Is'		=> 1.017,
 	'Dpchrist::LangUtil'	=> 1.005,
 	'Dpchrist::Module'	=> 1.018,
+	'Capture::Tiny'		=> 0.06,
 	'feature'		=> 0,
     },
     AUTHOR        => 'David Paul Christensen ' .
 		     '<dpchrist@holgerdanske.com>',
     clean		=> {
-	FILES => q( *~tmp */*~tmp Dpchrist* ),
+	FILES => q( *~tmp */*~tmp Dpchrist* debug.log ),
     },
 );
 

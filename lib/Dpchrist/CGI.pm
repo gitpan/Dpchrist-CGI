@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.18 2010-11-16 05:28:51 dpchrist Exp $
+# $Id: CGI.pm,v 1.24 2010-11-18 23:24:09 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -9,6 +9,12 @@ package Dpchrist::CGI;
 use 5.010;
 use strict;
 use warnings;
+
+use constant DEBUG		=> 0;
+
+use constant RX_UNTAINT_PATH	=> qr/([^\x00]+)/;
+use constant RX_UNTAINT_TEXTAREA => qr/([\PC\n\r]+)/;
+use constant RX_UNTAINT_TEXTFIELD => qr/([\PC]+)/;
 
 require Exporter;
 
@@ -30,21 +36,72 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.18 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.24 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
 #----------------------------------------------------------------------
 
-use Carp;
-use CGI				qw(:standard);
+use Carp			qw( cluck confess );
+use CGI				qw( :standard );
 use Data::Dumper;
+use Dpchrist::Debug		qw( :all );
+use Dpchrist::Is		qw( :all );
 
 #######################################################################
 
 =head1 NAME
 
 Dpchrist::CGI - utility subroutines for CGI scripts
+
+=head1 SYNOPSIS
+
+See synopsis.cgi in the source distribution cgi-bin/ directory:
+
+    #! /usr/bin/perl -T
+    use 5.010;
+    use strict;
+    use warnings;
+
+    use CGI                         qw( :standard );
+    use Dpchrist::CGI               qw( :all );
+
+    my $pinfo   = untaint_path path_info;
+    my $name    = untaint_textfield param('name');
+    my $comment = untaint_textarea param('comment');
+    my $special = untaint_regex(qr/([a-z ]+)/, param('special'));
+    my $cookie  = cookie(-name => 'mycookie', -value => 'chololate chip');
+
+    print(
+	header(-cookie => $cookie),
+	start_html,
+	start_form,
+	'name:',     nbsp(4), textfield(-name => 'name'   ), br,
+	'comment: ',          textarea( -name => 'comment'), br,
+	'special: ', nbsp(2), textfield(-name => 'special'), br,
+	submit, br,
+	a({
+	    -href => script_name . '/path/info?' . join('&',
+		'name=<strong>attempted%20sneaky%20tags</strong>',
+		'comment=One%20bright%20day%0D%0A' .
+			'In%20the%20middle%20of%20the%20night,',
+		'special=Regex%20matches%20lowercase%20and%20whitespacE',
+		),
+	    },
+	    'test link'
+	), br,
+	end_form, hr,
+	'path info: ',       escapeHTML($pinfo),    br,
+	'name:',    nbsp(4), escapeHTML($name),     br,
+	'comment:',      pre(escapeHTML($comment)), br,
+	'special:', nbsp(2), escapeHTML($special),  br,
+	pre(
+	    escapeHTML(dump_cookies),
+	    escapeHTML(dump_params),
+	), br,
+	end_html,
+    );
+
 
 =head2 SUBROUTINES
 
@@ -74,16 +131,20 @@ sub dump_cookies
 =head3 dump_params
 
     dump_params
+    dump_params OBJECT
 
 Calls get_params_as_rha() (see below),
 feeds the returned reference to Data::Dumper->Dump(),
 and returns the result.
 
+If OBJECT is provided,
+it must be a CGI object or derived from CGI.
+
 =cut
 
 sub dump_params
 {
-    my $params = get_params_as_rha();
+    my $params = get_params_as_rha(@_);
 
     return Data::Dumper->Dump([$params], [qw(params)]);
 }
@@ -116,19 +177,35 @@ sub get_cookies_as_rhh
 =head3 get_params_as_rha
 
     get_params_as_rha
+    get_params_as_rha OBJECT
 
 Calls CGI::param($i) in list context for all CGI parameters,
 populating a hash-of-arrays data structure along the way,
 and returns a reference to the data structure.
 
+If OBJECT is provided,
+it must be a CGI object or derived from CGI.
+
 =cut
 
 sub get_params_as_rha
 {
+    ### $CGI::Q may be undefined if no CGI calls made yet
+
+    my $q = shift;
+
+    my @params = $q ? $q->param() : param();
+
+    $q = $CGI::Q unless $q;
+
+    confess join(' ', 'ERROR: bad CGI object',
+	Data::Dumper->Dump([\@_, \@params, $q], [qw(*_ params q)]),
+    ) unless isa_object($q, 'CGI');
+
     my $rha = {};
 
-    foreach (param()) {
-	$rha->{$_} = [ param($_) ];
+    foreach (@params) {
+	$rha->{$_} = [ $q->param($_) ];
     }
 
     return $rha;
@@ -159,30 +236,36 @@ sub nbsp
 
     untaint_path LIST
 
-Calls untaint_regex(PATTERN,LIST)
-using a PATTERN suitable for Unix paths
-(everying except NULL)
-and returns result.
+Passes through call to untaint_regex()
+using a RX suitable for Unix paths
+(everying except NULL).
 
 =cut
 
 sub untaint_path
 {
-    return untaint_regex('[^\x00]*', @_);
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex(RX_UNTAINT_PATH, @_);
 }
 
 #----------------------------------------------------------------------
 
 =head3 untaint_regex
 
-    untaint_regex PATTERN,LIST
+    untaint_regex RX,LIST
 
-Untaints each LIST element using PATTERN.
-In scalar context,
-returns first matching substring for first item in LIST.
-In list context,
-returns an array of first matching substrings
-for entire list.
+Apply regular expression to each element in LIST.
+If LIST is empty, return void.
+In list context, process LIST
+and return first captured substrings for each LIST item.
+In scalar context, process first LIST item
+and return first captured substring.
+
+Caller usually creates RX with the quote regex operator 'qr()'.
+
+Returns undef for LIST elements that are references.
 
 Calls Carp::confess() on error.
 
@@ -190,25 +273,41 @@ Calls Carp::confess() on error.
 
 sub untaint_regex
 {
-    confess 'required parameter 1 ($regex) missing'
-	unless $_[0];
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
-    my $regex = shift;
+    confess join(' ',
+	'ERROR: first argument must be a regular expression',
+	Data::Dumper->Dump([\@_], [qw(*_)]),
+    ) unless @_ && ref($_[0]) eq 'Regexp';
 
-    my @retval;
-    foreach (@_) {
-	if (defined $_) {
-	    $_ =~ /($regex)/;
-	    push @retval, $1;
+    my $rx = shift;
+
+    if (@_) {
+	my @r;
+	foreach (@_) {
+	    cluck join(' ',
+		'attempt to apply regular expression',
+		'to undefined value',
+	    ) unless defined($_);
+	    cluck 'attempt to apply regular expression to reference'
+		if ref($_);
+	    if (defined($_) && !ref($_)) {
+		$_ =~ $rx;
+		push @r, $1;
+	    }
+	    else {
+		push @r, undef;
+	    }
+	    last unless wantarray;
 	}
-	else {
-	    push @retval, undef;
-	}
+	ddump('return',
+	    wantarray ? ([\@r],   ['*r']  )
+		      : ([$r[0]], ['r[0]'])
+	) if DEBUG;
+	return (wantarray) ? @r : $r[0];
     }
-
-    return (wantarray)
-	? @retval
-	: $retval[0];
+    dprint 'returning void' if DEBUG;
+    return;
 }
 
 #----------------------------------------------------------------------
@@ -217,16 +316,18 @@ sub untaint_regex
 
     untaint_textarea LIST
 
-Calls untaint_regex(PATTERN,LIST)
-using a PATTERN suitable for text areas
-(all printing characters including \n, \r, and \t)
-and returns result.
+Passes through call to untaint_regex()
+using a RX suitable for text areas
+(printable characters plus carriage return and line feed).
 
 =cut
 
 sub untaint_textarea
 {
-    return untaint_regex('[a-zA-Z0-9\`\~\!\@\#\$\%\^\&\*\(\)\-\_\=\+\[\{\]\}\\\|\;\:\'\"\,\<\.\>\/\? \n\r\t]*', @_);
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex(RX_UNTAINT_TEXTAREA, @_);
 }
 
 #----------------------------------------------------------------------
@@ -235,16 +336,18 @@ sub untaint_textarea
 
     untaint_textfield LIST
 
-Calls untaint_regex(PATTERN,LIST)
-using a PATTERN suitable for text fields
-(all printing characters, not including \n, \r, and \t)
-and returns result.
+Passes through call to untaint_regex()
+using a RX suitable for text areas
+(printable characters).
 
 =cut
 
 sub untaint_textfield
 {
-    return untaint_regex('[a-zA-Z0-9\`\~\!\@\#\$\%\^\&\*\(\)\-\_\=\+\[\{\]\}\\\|\;\:\'\"\,\<\.\>\/\? ]*', @_);
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex(RX_UNTAINT_TEXTFIELD, @_);
 }
 
 #######################################################################
