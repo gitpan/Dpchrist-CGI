@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.24 2010-11-18 23:24:09 dpchrist Exp $
+# $Id: CGI.pm,v 1.25 2010-11-19 00:58:42 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -36,7 +36,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.24 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.25 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -385,8 +385,6 @@ Complete:
 =head1 SEE ALSO
 
     CGI.pm
-    Dpchrist::CGI::Widget
-    Dpchrist::CGI::Widget::Checkbox
 
 
 =head1 AUTHOR
