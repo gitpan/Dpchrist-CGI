@@ -1,12 +1,11 @@
 #######################################################################
-# $Id: 2_untaint_regex.t,v 1.6 2010-11-18 22:52:58 dpchrist Exp $
+# $Id: 2_untaint_regex.t,v 1.7 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_regex().
 #
 # Copyright (c) 2010 by David Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use 5.010;
 use strict;
 use warnings;
 

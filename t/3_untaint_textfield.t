@@ -1,12 +1,11 @@
 #######################################################################
-# $Id: 3_untaint_textfield.t,v 1.2 2010-11-18 22:52:58 dpchrist Exp $
+# $Id: 3_untaint_textfield.t,v 1.3 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_textfield().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use 5.010;
 use strict;
 use warnings;
 
