@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.10 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: Makefile.PL,v 1.12 2010-11-25 20:52:50 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -22,26 +22,25 @@ use ExtUtils::MakeMaker;
 
 use Dpchrist::Module::MakefilePL (
     -mcpani		=> $ENV{CPAN_AUTHORID},
-    -pod2html	 	=> [qw(
-	lib/Dpchrist/CGI.pm
-    )],
+    -pod2html	 	=> qw(lib/Dpchrist/CGI.pm),
+    -readme	 	=> qw(lib/Dpchrist/CGI.pm),
     -release		=> $ENV{RELEASE_ROOT},
 );
 
 WriteMakefile(
-    NAME          => 'Dpchrist::CGI',
-    VERSION_FROM  => 'lib/Dpchrist/CGI.pm',
-    ABSTRACT_FROM => 'lib/Dpchrist/CGI.pm',
-    PREREQ_PM     => {
-	'Dpchrist::Debug'	=> 1.039,
-	'Dpchrist::Is'		=> 1.017,
-	'Dpchrist::LangUtil'	=> 1.005,
-	'Dpchrist::Module'	=> 1.018,
-	'Capture::Tiny'		=> 0.06,
+    NAME		=> 'Dpchrist::CGI',
+    VERSION_FROM	=> 'lib/Dpchrist/CGI.pm',
+    ABSTRACT_FROM	=> 'lib/Dpchrist/CGI.pm',
+    PREREQ_PM		=> {
+	'Dpchrist::Debug'	=> 1.041,
+	'Dpchrist::Is'		=> 1.024,
+	'Dpchrist::LangUtil'	=> 1.010,
+	'Dpchrist::Module'	=> 1.021,
+	'Capture::Tiny'		=> 0,
 	'feature'		=> 0,
     },
-    AUTHOR        => 'David Paul Christensen ' .
-		     '<dpchrist@holgerdanske.com>',
+    AUTHOR		=>
+	'David Paul Christensen <dpchrist@holgerdanske.com>',
     clean		=> {
 	FILES => q( *~tmp */*~tmp Dpchrist* debug.log ),
     },

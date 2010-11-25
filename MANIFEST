@@ -1,9 +1,11 @@
 Changes
-Makefile.PL
 MANIFEST
+README
+Makefile.PL
 lib/Dpchrist/CGI.pm
 t/0_compile_modules.t
 t/1_Dpchrist-CGI.t
+t/2_calc_checksum.t
 t/2_get_cookies_as_rhh.t
 t/2_get_params_as_rha.t
 t/2_merge_args.t
@@ -11,6 +13,8 @@ t/2_merge_attr.t
 t/2_untaint_regex.t
 t/3_dump_cookies.t
 t/3_dump_params.t
+t/3_gen_checkbox.t
+t/3_gen_hidden.t
 t/3_gen_password_field.t
 t/3_gen_td.t
 t/3_gen_textarea.t

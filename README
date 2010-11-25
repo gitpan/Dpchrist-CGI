@@ -1,0 +1,423 @@
+NAME
+    Dpchrist::CGI - utility subroutines for CGI scripts
+
+DESCRIPTION
+    This documentation describes module revision $Revision: 1.43 $.
+
+    This is alpha test level software and may change or disappear at any
+    time.
+
+  GLOBALS
+   %CHECKBOX_ARGS
+        %CHECKBOX_ARGS = ();
+
+    Default argments used by gen_checkbox().
+
+   $CHECKSUM_SALT
+        $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
+
+    Default hashing salt used by gen_hidden_checksum(). Caller should set
+    this value after use'ing this module.
+
+   %PASSWORD_FIELD_ARGS
+        %PASSWORD_FIELD_ARGS = (
+            -size      => 70,
+            -maxlength => 80,
+        );
+
+    Default argments used by gen_password().
+
+   $RX_UNTAINT_CHECKBOX
+        $RX_UNTAINT_CHECKBOX = qr/(on)/;
+
+    Regular expression used for untainting paths.
+
+   $RX_UNTAINT_PATH
+        $RX_UNTAINT_PATH = qr/([^\x00]+)/;
+
+    Regular expression used for untainting paths.
+
+   $RX_UNTAINT_TEXTAREA
+        $RX_UNTAINT_TEXTAREA = qr/([\PC\n\r]+)/;
+
+    Regular expression used for untainting textareas.
+
+   $RX_UNTAINT_TEXTFIELD
+        $RX_UNTAINT_TEXTFIELD = qr/([\PC]+)/;
+
+    Regular expression used for untainting textfields and password fields.
+
+   %TD_ATTR
+        %TD_ATTR = (
+            -align  => 'LEFT', 
+            -valign => 'TOP',
+        );
+
+    Default attributes used by gen_td().
+
+   %TEXTAREA_ARGS
+        TEXTAREA_ARGS = (    
+            -maxlength => 32*1024,
+            -columns   => 80,
+            -rows      => 24,
+            -wrap      => 'physical',
+        );
+
+    Default arguments used by gen_textarea().
+
+   %TEXTFIELD_ARGS
+        %TEXTFIELD_ARGS = (
+            -size      => 70,
+            -maxlength => 80,
+        );
+
+    Default arguments used by gen_textfield().
+
+   %TH_ATTR
+        %TH_ATTR = (
+            -align  => 'LEFT', 
+            -valign => 'TOP',
+            -width  => '20%',
+        );
+
+    Default attributes used by gen_th().
+
+  SUBROUTINES
+   calc_checksum
+        my $md5 = calc_checksum(LIST);
+
+        # LIST are items to be fed into the checksum
+
+    Walks list and expands array references. Passes through call to
+    Digest::MD5::md5_hex() using $CHECKSUM_SALT and walked list.
+
+    LIST items, and referenced array items, should be strings, otherwise the
+    checksum seems to be different for each hit (?).
+
+    Calls Carp::confess() on error.
+
+   dump_cookies
+        push @debug_html, pre(escapeHTML(dump_cookies()));
+
+    Calls get_cookies_as_rhh() (see below), feeds the returned reference to
+    Data::Dumper->Dump(), and returns the result.
+
+   dump_params
+        push @debug_html, pre(escapeHTML(dump_params()));
+
+        push @debug_html, pre(escapeHTML(dump_params(OBJECT)));
+
+        # OBJECT (optional) is a CGI object or CGI-derived object
+
+    Calls get_params_as_rha() (see below), feeds the returned reference to
+    Data::Dumper->Dump(), and returns the result.
+
+   gen_checkbox
+        push @html, gen_checkbox(ARGS);
+
+        # ARGS are named arguments
+
+    Merges named arguments ARGS with default arguments %CHECKBOX_ARGS (ARGS
+    have priority), and passes through call with net arguments to
+    CGI::checkbox().
+
+   gen_hidden
+        push @html, gen_hidden(-name => NAME, -value => VALUE);
+
+        # NAME is a CGI parameter name
+
+        # VALUE is the parameter value, or a reference to a list of values
+
+    Returns an array of HTML elements:
+
+    [0] A hidden control with name NAME and value VALUE.
+
+    [1] A hidden control with name given by NAME with '_ck' suffix and value
+    given by calling calc_checksum() with $CHECKSUM_SALT and incoming
+    arguments.
+
+    Calls Carp::confess() on error.
+
+   gen_password_field
+        push @html, gen_password_field(ARGS);
+
+        # ARGS are named arguments
+
+    Merges named arguments ARGS with default arguments %PASSWORD_FIELD_ARGS
+    (ARGS have priority), and passes through call with net arguments to
+    CGI::password_field().
+
+   gen_td
+        push @html, table( Tr([
+            th('one') . gen_td(ARGS),
+            th('two') . gen_td(ATTR, ARGS),
+        ]));
+
+        # ARGS are named arguments
+
+        # ATTR (optional) is a reference to a hash of attributes
+
+    Merges named attributes ATTR with default attributes %TD_ATTR (ATTR has
+    priority) and passes through call with net attributes and arguments to
+    CGI::td().
+
+   gen_textarea
+        push @html, gen_textarea(ARGS);
+
+        # ARGS is a list of named arguments
+
+    Merges name arguments ARGS with default arguments %TEXTAREA_ARGS (ARGS
+    has priority) and passes through call with net arguments to
+    CGI::textarea().
+
+   gen_textfield
+        push @html, gen_textfield(ARGS);
+
+        # ARGS is a list of named arguments
+
+    Merges named arguments ARGS with default arguments %TEXTAREA_ARGS (ARGS
+    has priority) and passes through call with net attributes and arguments
+    to CGI::textfield().
+
+   gen_th
+        push @html, table( Tr([
+            gen_th(ARGS)       . td(1),
+            gen_th(ATTR, ARGS) . td(2),
+        ]));
+
+        # ARGS is a list of arguments
+
+        # ATTR (optional) is a reference to a hash of named attributes
+
+    Merges named attributes ATTR with default attributes %TH_ATTR (ATTR has
+    priority) and passes through call with net attributes and arguments to
+    CGI::th().
+
+   get_cookies_as_rhh
+        my $cookies = get_cookies_as_rhh();
+
+    Calls CGI::cookie() in list context for all CGI cookies and returns a
+    reference to a hash-of-hashes data structure.
+
+   get_params_as_rha
+        my $params = get_params_as_rha();
+
+        my $params = get_params_as_rha(OBJECT);
+
+        # OBJECT (optional) is a CGI object or CGI-derived object
+
+    Calls CGI::param() in list context for all CGI parameters and returns a
+    hash-of-arrays data structure.
+
+    Calls Carp::confess() on error.
+
+   merge_args
+        merge_args(ARRAYREF, ARGS);
+
+        # ARRAYREF is a reference to an array
+
+        # ARGS is a reference to a hash of named arguments
+
+    Inserts or merges named arguments ARGS into array referenced by
+    ARRAYREF. Typically used with CGI.pm widget generating functions, such
+    as textarea(). Referenced array is modified in the process, and
+    key/value pairs may be reordered. Returns void.
+
+    Calls Carp::confess() on error.
+
+   merge_attr
+        merge_attr(ARRAYREF, ATTR);
+
+        # ARRAYREF is a reference to an array
+
+        # ATTR is a reference to a hash of named attributes
+
+    Inserts or merges named attributes ATTR into array referenced by
+    ARRAYREF. Attributes in first element of referenced array take
+    precedence over attributes in ATTR. Typically used with CGI.pm tag
+    generating functions, such as td(). First element of referenced array
+    may be created or modified in the process. Returns void. Doesn't bother
+    to merge if reference array is empty. Returns void.
+
+    Calls Carp::confess() on error.
+
+   nbsp
+        push @html, nbsp();
+
+        push @html, nbsp(EXPR);
+
+        # EXPR (optional) is a whole number
+
+    Returns one or more nonbreaking space HTML character entities.
+
+    Calls Carp::confess() on error.
+
+   untaint_checkbox
+        my @untainted = untaint_checkbox(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for checkboxs
+    ('on').
+
+   untaint_path
+        my @untainted = untaint_path(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for Unix
+    paths (everying except NULL).
+
+   untaint_regex
+        my @untainted = untaint_regex(RX, LIST);
+
+        # RX is a regular epxression
+
+        # LIST are strings to be untainted
+
+    Applies regular expression to each element in LIST. If LIST is empty,
+    returns void. In list context, process LIST and return first captured
+    substrings for each LIST item. In scalar context, process first LIST
+    item and return first captured substring.
+
+    Caller usually creates RX with the quote regular expression operator
+    'qr()'.
+
+    Returns undef for LIST elements that are references.
+
+    Calls Carp::confess() on error.
+
+    Calls Carp::cluck() if LIST contains undefined values or references.
+
+   untaint_textarea
+        my @untainted = untaint_textarea(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for text
+    areas (printable characters plus carriage return and line feed).
+
+   untaint_textfield
+        my @untainted = untaint_textfield(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for
+    textfields (printable characters).
+
+   validate_checkbox
+        push @errors, validate_checkbox(NAME);
+
+        # NAME is a CGI parameter name
+
+    Performs checkbox checks on CGI parameter with name NAME. Skips checks
+    if CGI parameter does not exist (e.g. empty or fresh hit). Returns error
+    strings if problems found.
+
+    Calls Carp::confess() on error.
+
+   validate_hidden
+        push @errors, validate_hidden(NAME);
+
+        # NAME is a CGI parameter name
+
+    Performs hidden field checks on CGI parameter with name NAME. Skips
+    checks if no CGI parameters exist (e.g. fresh hit). Returns error
+    strings if problems found.
+
+    Calls Carp::confess() on error.
+
+   validate_parameter_present
+        push @errors, validate_required_parameters(LIST);
+
+        # LIST are CGI parameter names
+
+    Checks that the CGI parameters with names in LIST are defined and have
+    values. Skips checks if no CGI parameters exist (e.g. fresh hit).
+    Returns list of error strings if problems found.
+
+    Calls Carp::confess() on error.
+
+   validate_password_field
+        push @errors, validate_password_field(NAME);
+
+        # NAME is a CGI parameter name
+
+    Performs password field checks on CGI parameter with name NAME. Skips
+    checks if CGI parameter does not exist (e.g. empty or fresh hit).
+    Returns error strings if problems found.
+
+    Calls Carp::confess() on error.
+
+   validate_textarea
+        push @error, validate_textarea(NAME);
+
+        # NAME is a CGI parameter name
+
+    Performs textarea checks on CGI parameter with name NAME. Skips checks
+    if parameter does not exist (e.g. empty or fresh hit). Returns error
+    strings if problems found.
+
+    Calls Carp::confess() on error.
+
+   validate_textfield
+        push @errors, validate_textfield(NAME);
+
+        # NAME is a CGI parameter name
+
+    Performs textfield checks on CGI parameter with name NAME. Skips checks
+    if parameter does not exist (e.g. empty or fresh hit). and returns error
+    strings if problems found.
+
+    Calls Carp::confess() on error.
+
+  EXPORT
+    None by default.
+
+    All of the subroutines may be imported by using the ':all' tag:
+
+        use Dpchrist::CGI           qw( :all );
+
+    See 'perldoc Export' for everything in between.
+
+INSTALLATION
+    Old school:
+
+        perl Makefile.PL
+        make
+        make test
+        make install
+
+    Minimal:
+
+        cpan Dpchrist::CGI
+
+    Complete:
+
+        cpan Bundle::Dpchrist
+
+  DEPENDENCIES
+    See Makefile.PL in source distribution root directory.
+
+SEE ALSO
+        CGI.pm
+
+AUTHOR
+    David Paul Christensen dpchrist@holgerdanske.com
+
+COPYRIGHT AND LICENSE
+    Copyright (C) 2010 by David Paul Christensen
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; version 2.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+

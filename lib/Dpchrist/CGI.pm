@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.41 2010-11-25 01:46:07 dpchrist Exp $
+# $Id: CGI.pm,v 1.43 2010-11-25 18:56:07 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -16,6 +16,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [ qw(
+	%CHECKBOX_ARGS
 	$CHECKSUM_SALT
 	%PASSWORD_FIELD_ARGS
 	%TEXTAREA_ARGS
@@ -24,6 +25,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	calc_checksum
 	dump_cookies
 	dump_params
+	gen_checkbox
 	gen_hidden
 	gen_password_field
 	gen_textarea
@@ -35,10 +37,12 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	merge_args
 	merge_attr
 	nbsp
+	untaint_checkbox
 	untaint_path
 	untaint_regex
 	untaint_textarea
 	untaint_textfield
+	validate_checkbox
 	validate_hidden
 	validate_parameter_present
 	validate_password_field
@@ -50,7 +54,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.41 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.43 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -72,12 +76,28 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.41 $.
+This documentation describes module revision $Revision: 1.43 $.
+
+
+This is alpha test level software
+and may change or disappear at any time.
 
 
 =head2 GLOBALS
 
 =cut
+
+#----------------------------------------------------------------------
+
+=head3 %CHECKBOX_ARGS
+
+    %CHECKBOX_ARGS = ();
+
+Default argments used by gen_checkbox().
+
+=cut
+
+our %CHECKBOX_ARGS = ();
 
 #----------------------------------------------------------------------
 
@@ -112,11 +132,23 @@ our %PASSWORD_FIELD_ARGS = (
 
 #----------------------------------------------------------------------
 
+=head3 $RX_UNTAINT_CHECKBOX
+
+    $RX_UNTAINT_CHECKBOX = qr/(on)/;
+
+Regular expression used for untainting paths.
+
+=cut
+
+our $RX_UNTAINT_CHECKBOX = qr/(on)/;
+
+#----------------------------------------------------------------------
+
 =head3 $RX_UNTAINT_PATH
 
     $RX_UNTAINT_PATH = qr/([^\x00]+)/;
 
-Regular expression used by untaint_path();
+Regular expression used for untainting paths.
 
 =cut
 
@@ -128,7 +160,7 @@ our $RX_UNTAINT_PATH = qr/([^\x00]+)/;
     
     $RX_UNTAINT_TEXTAREA = qr/([\PC\n\r]+)/;
 
-Regular expression used by untaint_textarea().
+Regular expression used for untainting textareas.
 
 =cut
 
@@ -140,7 +172,7 @@ our $RX_UNTAINT_TEXTAREA	= qr/([\PC\n\r]+)/;
 
     $RX_UNTAINT_TEXTFIELD = qr/([\PC]+)/;
 
-Regular expression used by untaint_textfield().
+Regular expression used for untainting textfields and password fields.
 
 =cut
 
@@ -317,6 +349,32 @@ sub dump_params
     my $params = get_params_as_rha(@_);
 
     return Data::Dumper->Dump([$params], [qw(params)]);
+}
+
+#----------------------------------------------------------------------
+
+=head3 gen_checkbox
+
+    push @html, gen_checkbox(ARGS);
+
+    # ARGS are named arguments
+
+Merges named arguments ARGS
+with default arguments %CHECKBOX_ARGS
+(ARGS have priority),
+and passes through call with net arguments to CGI::checkbox().
+
+=cut
+
+sub gen_checkbox
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    merge_args(\@_, \%CHECKBOX_ARGS);
+
+    ddump('pass through call to CGI::checkbox()',
+	[\@_], [qw(*_)]) if DEBUG;
+    CGI::checkbox(@_);
 }
 
 #----------------------------------------------------------------------
@@ -746,6 +804,28 @@ sub nbsp
 
 #----------------------------------------------------------------------
 
+=head3 untaint_checkbox
+
+    my @untainted = untaint_checkbox(LIST);
+
+    # LIST are strings to be untainted
+
+Passes through call to untaint_regex()
+using a RX suitable for checkboxs
+('on').
+
+=cut
+
+sub untaint_checkbox
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex($RX_UNTAINT_CHECKBOX, @_);
+}
+
+#----------------------------------------------------------------------
+
 =head3 untaint_path
 
     my @untainted = untaint_path(LIST);
@@ -876,6 +956,52 @@ sub untaint_textfield
 
     dprint('passing through call to untaint_regex()') if DEBUG;
     return untaint_regex($RX_UNTAINT_TEXTFIELD, @_);
+}
+
+#----------------------------------------------------------------------
+
+=head3 validate_checkbox
+
+    push @errors, validate_checkbox(NAME);
+
+    # NAME is a CGI parameter name
+
+Performs checkbox checks on 
+CGI parameter with name NAME.
+Skips checks if CGI parameter does not exist (e.g. empty or fresh hit).
+Returns error strings if problems found.
+
+Calls Carp::confess() on error.
+
+=cut
+
+sub validate_checkbox
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    confess join(' ',
+	'ERROR: requires one argument',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless @_ == 1;
+
+    confess join(' ',
+	'ERROR: argument must be a CGI parameter name',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_nonempty_string $_[0];
+
+    my $name = shift;
+    my $p = param($name);
+    my @errors;
+
+    if ($p) {
+	my $u = untaint_checkbox($p);
+	push @errors, (
+	    "ERROR: parameter '$name' contains invalid characters",
+	) unless $u && $p eq $u;
+    }
+
+    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
+    return @errors;
 }
 
 #----------------------------------------------------------------------
