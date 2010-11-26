@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.12 2010-11-25 20:52:50 dpchrist Exp $
+# $Id: Makefile.PL,v 1.13 2010-11-26 20:46:41 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -22,8 +22,8 @@ use ExtUtils::MakeMaker;
 
 use Dpchrist::Module::MakefilePL (
     -mcpani		=> $ENV{CPAN_AUTHORID},
-    -pod2html	 	=> qw(lib/Dpchrist/CGI.pm),
-    -readme	 	=> qw(lib/Dpchrist/CGI.pm),
+    -pod2html	 	=> 'lib/Dpchrist/CGI.pm',
+    -readme	 	=> 'lib/Dpchrist/CGI.pm',
     -release		=> $ENV{RELEASE_ROOT},
 );
 
@@ -32,11 +32,11 @@ WriteMakefile(
     VERSION_FROM	=> 'lib/Dpchrist/CGI.pm',
     ABSTRACT_FROM	=> 'lib/Dpchrist/CGI.pm',
     PREREQ_PM		=> {
-	'Dpchrist::Debug'	=> 1.041,
-	'Dpchrist::Is'		=> 1.024,
-	'Dpchrist::LangUtil'	=> 1.010,
-	'Dpchrist::Module'	=> 1.021,
 	'Capture::Tiny'		=> 0,
+	'Dpchrist::Debug'	=> 1.042,
+	'Dpchrist::Is'		=> 1.025,
+	'Dpchrist::LangUtil'	=> 1.011,
+	'Dpchrist::Module'	=> 1.023,
 	'feature'		=> 0,
     },
     AUTHOR		=>
