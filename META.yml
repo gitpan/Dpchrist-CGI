@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Dpchrist-CGI
-version:            1.044
+version:            1.045
 abstract:           utility subroutines for CGI scripts
 author:
     - David Paul Christensen <dpchrist@holgerdanske.com>
@@ -12,11 +12,15 @@ build_requires:
     ExtUtils::MakeMaker:  0
 requires:
     Capture::Tiny:       0
-    Dpchrist::Debug:     1.042
-    Dpchrist::Is:        1.025
-    Dpchrist::LangUtil:  1.011
-    Dpchrist::Module:    1.023
+    Dpchrist::Debug:     1.043
+    Dpchrist::Is:        1.026
+    Dpchrist::LangUtil:  1.012
+    Dpchrist::Module:    1.025
     feature:             0
+    Getopt::Long:        0
+    Pod::Html:           0
+    Pod::Text:           0
+    Pod::Usage:          0
 no_index:
     directory:
         - t

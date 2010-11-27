@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.44 2010-11-26 20:46:41 dpchrist Exp $
+# $Id: CGI.pm,v 1.45 2010-11-27 03:37:57 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -54,7 +54,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.44 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.45 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -76,7 +76,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.44 $.
+This documentation describes module revision $Revision: 1.45 $.
 
 
 This is alpha test level software
@@ -1296,23 +1296,30 @@ See 'perldoc Export' for everything in between.
 
 Old school:
 
-    perl Makefile.PL
-    make
-    make test
-    make install
+    $ perl Makefile.PL
+    $ make
+    $ make test
+    $ make install
 
 Minimal:
 
-    cpan Dpchrist::CGI
+    $ cpan Dpchrist::CGI
 
 Complete:
 
-    cpan Bundle::Dpchrist
+    $ cpan Bundle::Dpchrist
+
+The following warning may be safely ignored:
+
+    Can't locate Dpchrist/Module/MakefilePL.pm in @INC (@INC contains: /
+    etc/perl /usr/local/lib/perl/5.10.0 /usr/local/share/perl/5.10.0 /us
+    r/lib/perl5 /usr/share/perl5 /usr/lib/perl/5.10 /usr/share/perl/5.10
+    /usr/local/lib/site_perl .) at Makefile.PL line 22.
 
 
-=head2 DEPENDENCIES
+=head2 PREREQUISITES
 
-See Makefile.PL in source distribution root directory.
+See Makefile.PL in the source distribution root directory.
 
 
 =head1 SEE ALSO

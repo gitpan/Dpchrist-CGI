@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.13 2010-11-26 20:46:41 dpchrist Exp $
+# $Id: Makefile.PL,v 1.14 2010-11-27 03:37:57 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -18,26 +18,35 @@
 # USA.
 #######################################################################
 
-use ExtUtils::MakeMaker;
+eval {
+    require Dpchrist::Module::MakefilePL;
+    
+    import Dpchrist::Module::MakefilePL (
+	-mcpani		=> $ENV{CPAN_AUTHORID},
+	-pod2html 	=> 'lib/Dpchrist/CGI.pm',
+	-readme	 	=> 'lib/Dpchrist/CGI.pm',
+	-release	=> $ENV{RELEASE_ROOT},
+    );
+};
+warn $@ if $@;
 
-use Dpchrist::Module::MakefilePL (
-    -mcpani		=> $ENV{CPAN_AUTHORID},
-    -pod2html	 	=> 'lib/Dpchrist/CGI.pm',
-    -readme	 	=> 'lib/Dpchrist/CGI.pm',
-    -release		=> $ENV{RELEASE_ROOT},
-);
+use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME		=> 'Dpchrist::CGI',
     VERSION_FROM	=> 'lib/Dpchrist/CGI.pm',
     ABSTRACT_FROM	=> 'lib/Dpchrist/CGI.pm',
     PREREQ_PM		=> {
-	'Capture::Tiny'		=> 0,
-	'Dpchrist::Debug'	=> 1.042,
-	'Dpchrist::Is'		=> 1.025,
-	'Dpchrist::LangUtil'	=> 1.011,
-	'Dpchrist::Module'	=> 1.023,
-	'feature'		=> 0,
+	Capture::Tiny		=> 0,
+	Dpchrist::Debug		=> 1.043,
+	Dpchrist::Is		=> 1.026,
+	Dpchrist::LangUtil	=> 1.012,
+	Dpchrist::Module	=> 1.025,
+	Getopt::Long		=> 0,
+	Pod::Html		=> 0,
+	Pod::Text		=> 0,
+	Pod::Usage		=> 0,
+	feature			=> 0,
     },
     AUTHOR		=>
 	'David Paul Christensen <dpchrist@holgerdanske.com>',
