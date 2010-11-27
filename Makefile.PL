@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.14 2010-11-27 03:37:57 dpchrist Exp $
+# $Id: Makefile.PL,v 1.15 2010-11-27 07:37:14 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -38,10 +38,10 @@ WriteMakefile(
     ABSTRACT_FROM	=> 'lib/Dpchrist/CGI.pm',
     PREREQ_PM		=> {
 	Capture::Tiny		=> 0,
-	Dpchrist::Debug		=> 1.043,
-	Dpchrist::Is		=> 1.026,
-	Dpchrist::LangUtil	=> 1.012,
-	Dpchrist::Module	=> 1.025,
+	Dpchrist::Debug		=> 1.044,
+	Dpchrist::Is		=> 1.027,
+	Dpchrist::LangUtil	=> 1.013,
+	Dpchrist::Module	=> 1.026,
 	Getopt::Long		=> 0,
 	Pod::Html		=> 0,
 	Pod::Text		=> 0,
