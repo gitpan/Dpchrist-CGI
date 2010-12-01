@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 2_get_params_as_rha.t,v 1.3 2010-11-17 21:23:08 dpchrist Exp $
+# $Id: get_params_as_rha.t,v 1.3 2010-11-17 21:23:08 dpchrist Exp $
 #
 # Test script for get_params_as_rha() with functional interface.
 #

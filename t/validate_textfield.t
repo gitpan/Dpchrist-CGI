@@ -1,7 +1,7 @@
 #######################################################################
-# $Id: 4_validate_textarea.t,v 1.2 2010-11-24 22:12:25 dpchrist Exp $
+# $Id: validate_textfield.t,v 1.2 2010-11-24 22:12:25 dpchrist Exp $
 #
-# Test script for Dpchrist::CGI::validate_textarea().
+# Test script for Dpchrist::CGI::validate_textfield().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
@@ -11,7 +11,8 @@ use warnings;
 
 use Test::More tests		=> 8;
 
-use Dpchrist::CGI		qw( %TEXTAREA_ARGS validate_textarea );
+use Dpchrist::CGI		qw( %TEXTFIELD_ARGS
+				    validate_textfield );
 
 use Carp;
 use CGI				qw( :standard );
@@ -19,21 +20,18 @@ use Data::Dumper;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
-$TEXTAREA_ARGS{-maxlength}	= 400;
 
 my (@r, $s, $s2);
 
 my $bad;
 
 for (my $i = 0; $i < 32; $i++) {
-    next if $i eq 10;
-    next if $i eq 13;
     $bad .= chr($i);
 }
 $bad .= chr(127);
 
 @r = eval {
-    validate_textarea();
+    validate_textfield();
 };
 ok(								#     1
     $@ =~ 'ERROR: requires one argument',
@@ -43,7 +41,7 @@ ok(								#     1
 );
 
 @r = eval {
-    validate_textarea undef;
+    validate_textfield undef;
 };
 ok(								#     2
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -53,7 +51,7 @@ ok(								#     2
 );
 
 @r = eval {
-    validate_textarea '';
+    validate_textfield '';
 };
 ok(								#     3
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -63,7 +61,7 @@ ok(								#     3
 );
 
 @r = eval {
-    validate_textarea bless({}, 'Foo');
+    validate_textfield bless({}, 'Foo');
 };
 ok(								#     4
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -73,7 +71,7 @@ ok(								#     4
 );
 
 @r = eval {
-    validate_textarea 'foo';
+    validate_textfield 'foo';
 };
 ok(								#     5
     !$@
@@ -86,7 +84,7 @@ ok(								#     5
 @r = eval {
     $s = join(' ', __FILE__, __LINE__);
     param(-name => $s, -value => '');
-    validate_textarea $s;
+    validate_textfield $s;
 };
 ok(								#     6
     !$@
@@ -99,9 +97,9 @@ ok(								#     6
 
 @r = eval {
     $s = join(' ', __FILE__, __LINE__);
-    $s2 = '123456789 ' x (1 + $TEXTAREA_ARGS{-maxlength}/10);
+    $s2 = '123456789 ' x (1 + $TEXTFIELD_ARGS{-maxlength}/10);
     param(-name => $s, -value => $s2);
-    validate_textarea $s;
+    validate_textfield $s;
 };
 ok(								#     7
     !$@
@@ -116,7 +114,7 @@ ok(								#     7
 @r = eval {
     $s = join(' ', __FILE__, __LINE__);
     param(-name => $s, -value => $bad);
-    validate_textarea $s;
+    validate_textfield $s;
 };
 ok(								#     8
     !$@

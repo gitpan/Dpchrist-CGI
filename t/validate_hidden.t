@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 3_validate_hidden.t,v 1.2 2010-11-25 01:46:07 dpchrist Exp $
+# $Id: validate_hidden.t,v 1.2 2010-11-25 01:46:07 dpchrist Exp $
 #
 # Test script for validate_hidden().
 #

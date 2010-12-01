@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: 2_calc_checksum.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: calc_checksum.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::calc_checksum().
 #

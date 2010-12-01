@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 3_dump_cookies.t,v 1.2 2010-11-17 21:35:16 dpchrist Exp $
+# $Id: dump_cookies.t,v 1.2 2010-11-17 21:35:16 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::dump_cookies().
 #

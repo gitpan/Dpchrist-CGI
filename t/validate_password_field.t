@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: 4_validate_password_field.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: validate_password_field.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_password_field().
 #

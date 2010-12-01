@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: 3_untaint_path.t,v 1.6 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_path.t,v 1.6 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_path().
 #

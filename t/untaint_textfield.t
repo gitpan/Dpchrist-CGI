@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: 3_untaint_textfield.t,v 1.3 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_textfield.t,v 1.3 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_textfield().
 #

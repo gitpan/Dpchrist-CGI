@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 2_merge_attr.t,v 1.2 2010-11-21 06:32:30 dpchrist Exp $
+# $Id: merge_attr.t,v 1.2 2010-11-21 06:32:30 dpchrist Exp $
 #
 # Test script for merge_attr().
 #

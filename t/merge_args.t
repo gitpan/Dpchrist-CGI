@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 2_merge_args.t,v 1.1 2010-11-21 06:47:54 dpchrist Exp $
+# $Id: merge_args.t,v 1.1 2010-11-21 06:47:54 dpchrist Exp $
 #
 # Test script for merge_args().
 #

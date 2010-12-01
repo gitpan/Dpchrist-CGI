@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: 2_untaint_regex.t,v 1.7 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_regex.t,v 1.7 2010-11-24 22:12:24 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_regex().
 #

@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 3_gen_checkbox.t,v 1.2 2010-11-25 19:10:54 dpchrist Exp $
+# $Id: gen_checkbox.t,v 1.2 2010-11-25 19:10:54 dpchrist Exp $
 #
 # Test script for gen_checkbox().
 #

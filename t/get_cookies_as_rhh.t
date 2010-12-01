@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 2_get_cookies_as_rhh.t,v 1.4 2010-11-17 21:35:16 dpchrist Exp $
+# $Id: get_cookies_as_rhh.t,v 1.4 2010-11-17 21:35:16 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::get_cookies_as_rhh().
 #

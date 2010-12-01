@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: 3_gen_td.t,v 1.1 2010-11-21 04:02:28 dpchrist Exp $
+# $Id: gen_td.t,v 1.1 2010-11-21 04:02:28 dpchrist Exp $
 #
 # Test script for gen_td().
 #
