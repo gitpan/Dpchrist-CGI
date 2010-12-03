@@ -1,12 +1,12 @@
 #######################################################################
-# $Id: validate_password_field.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: validate_password_field.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_password_field().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use Test::More tests		=> 8;
+use Test::More tests		=> 10;
 
 use strict;
 use warnings;
@@ -24,14 +24,15 @@ $Data::Dumper::Sortkeys		= 1;
 my (@r, $s, $s2);
 
 my $bad;
-
 for (my $i = 0; $i < 32; $i++) {
     $bad .= chr($i);
 }
 $bad .= chr(127);
 
+my $o = bless {}, 'Foo';
+
 @r = eval {
-    validate_password_field();
+    validate_password_field;
 };
 ok(								#     1
     $@ =~ 'ERROR: requires one argument',
@@ -45,7 +46,7 @@ ok(								#     1
 };
 ok(								#     2
     $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with undef should throw exception'
+    'call with undef first argument should throw exception'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
 );
@@ -55,28 +56,43 @@ ok(								#     2
 };
 ok(								#     3
     $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with empty string should throw exception'
+    'call with empty string as first argument should throw exception'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
 );
 
 @r = eval {
-    validate_password_field bless({}, 'Foo');
+    validate_password_field $o,
 };
 ok(								#     4
     $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with object should throw exception'
+    'call with object first argument should throw exception'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
 );
 
 @r = eval {
-    validate_password_field 'foo';
+    $s = join ' ', __FILE__, __LINE__;
+    validate_password_field $s;
 };
 ok(								#     5
     !$@
     && @r == 0,
-    'call for non-existant CGI parameter should return empty list'
+    'call for with no CGI parameters should return empty array'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+);
+
+@r = eval {
+    $s = join ' ', __FILE__, __LINE__;
+    param(-name => $s, -value => '');
+    $s2 = join ' ', __FILE__, __LINE__;
+    validate_password_field $s2;
+};
+ok(								#     6
+    !$@
+    && @r == 0,
+    'call for non-existent CGI parameter should return empty array'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
 );
@@ -86,11 +102,11 @@ ok(								#     5
     param(-name => $s, -value => '');
     validate_password_field $s;
 };
-ok(								#     6
+ok(								#     7
     !$@
     && @r == 0,
     'call for CGI parameter containing empty string ' .
-    'should return empty list'
+    'should return empty array'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
 );
@@ -101,7 +117,7 @@ ok(								#     6
     param(-name => $s, -value => $s2);
     validate_password_field $s;
 };
-ok(								#     7
+ok(								#     8
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s' is too long/,
@@ -116,12 +132,26 @@ ok(								#     7
     param(-name => $s, -value => $bad);
     validate_password_field $s;
 };
-ok(								#     8
+ok(								#     9
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
     'call for CGI parameter with bad characters ' .
     'should return error message'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $bad, $s, \@r], [qw(@ bad s *r)]),
+);
+
+@r = eval {
+    $s = join(' ', __FILE__, __LINE__);
+    $s2 = join(' ', __FILE__, __LINE__);
+    param(-name => $s, -value => $s2);
+    validate_password_field $s;
+};
+ok(								#    10
+    !$@
+    && @r == 0,
+    'call for CGI parameter with good value should return empty array'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $bad, $s, \@r], [qw(@ bad s *r)]),
 );

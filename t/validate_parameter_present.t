@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: validate_parameter_present.t,v 1.4 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: validate_parameter_present.t,v 1.5 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_parameter_present().
 #
@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-use Test::More tests		=> 7;
+use Test::More tests		=> 8;
 
 use Dpchrist::CGI		qw( validate_parameter_present );
 
@@ -63,14 +63,15 @@ ok(								#     4
 );
 
 @r = eval {
-    validate_parameter_present 'foo';
+    $s = join ' ', __FILE__, __LINE__;
+    validate_parameter_present $s;
 };
 ok(								#     5
     !$@
     && @r == 0,
     'call with no CGI parameters should return empty list'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
 );
 
 @r = eval {
@@ -96,8 +97,22 @@ ok(								#     7
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s2' missing/,
-    'call on non-existant CGI parameter ' .
+    'call on non-existent CGI parameter ' .
     'should return error string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
+);
+
+@r = eval {
+    $s = join(' ', __FILE__, __LINE__);
+    $s2 = join(' ', __FILE__, __LINE__);
+    param(-name => $s, -value => $s2);
+    validate_parameter_present $s;
+};
+ok(								#     8
+    !$@
+    && @r == 0,
+    'call on CGI parameter with value should return empty array'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
 );

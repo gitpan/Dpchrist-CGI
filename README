@@ -2,7 +2,7 @@ NAME
     Dpchrist::CGI - utility subroutines for CGI scripts
 
 DESCRIPTION
-    This documentation describes module revision $Revision: 1.47 $.
+    This documentation describes module revision $Revision: 1.50 $.
 
     This is alpha test level software and may change or disappear at any
     time.
@@ -25,27 +25,42 @@ DESCRIPTION
             -maxlength => 80,
         );
 
-    Default argments used by gen_password().
+    Default argments used by gen_password_field().
+
+   $RX_PASSTHROUGH
+        $RX_PASSTHROUGH    => qr/^(.*)$/;
+
+    Pass-through regular expression for testing.
 
    $RX_UNTAINT_CHECKBOX
-        $RX_UNTAINT_CHECKBOX = qr/(on)/;
+        $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
 
-    Regular expression used for untainting paths.
+    Regular expression used for untainting checkbox parameter values.
+
+   $RX_UNTAINT_PASSWORD_FIELD
+        $RX_UNTAINT_PASSWORD_FIELD = qr/^([\PC]*)$/;
+
+    Regular expression used for untainting password field parameter values.
 
    $RX_UNTAINT_PATH
-        $RX_UNTAINT_PATH = qr/([^\x00]+)/;
+        $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
 
     Regular expression used for untainting paths.
 
-   $RX_UNTAINT_TEXTAREA
-        $RX_UNTAINT_TEXTAREA = qr/([\PC\n\r]+)/;
+   $RX_UNTAINT_RADIO_GROUP
+        $RX_UNTAINT_RADIO_GROUP = qr/^([\PC]*)$/;
 
-    Regular expression used for untainting textareas.
+    Regular expression used for untainting radio group parameter values.
+
+   $RX_UNTAINT_TEXTAREA
+        $RX_UNTAINT_TEXTAREA = qr/^([\PC\n\r]*)$/;
+
+    Regular expression used for untainting textarea parameter values.
 
    $RX_UNTAINT_TEXTFIELD
-        $RX_UNTAINT_TEXTFIELD = qr/([\PC]+)/;
+        $RX_UNTAINT_TEXTFIELD = qr/^([\PC]*)$/;
 
-    Regular expression used for untainting textfields and password fields.
+    Regular expression used for untainting textfield parameter values.
 
    %TD_ATTR
         %TD_ATTR = (
@@ -236,8 +251,8 @@ DESCRIPTION
     ARRAYREF. Attributes in first element of referenced array take
     precedence over attributes in ATTR. Typically used with CGI.pm tag
     generating functions, such as td(). First element of referenced array
-    may be created or modified in the process. Returns void. Doesn't bother
-    to merge if reference array is empty. Returns void.
+    may be created or modified in the process. Doesn't bother to merge if
+    reference array is empty. Returns void.
 
     Calls Carp::confess() on error.
 
@@ -248,7 +263,8 @@ DESCRIPTION
 
         # EXPR (optional) is a whole number
 
-    Returns one or more nonbreaking space HTML character entities.
+    Returns zero or more non-breaking space HTML character entities. Call
+    without arguments returns one non-breaking space.
 
     Calls Carp::confess() on error.
 
@@ -260,6 +276,14 @@ DESCRIPTION
     Passes through call to untaint_regex() using a RX suitable for checkboxs
     ('on').
 
+   untaint_password_field
+        my @untainted = untaint_password_field(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for password
+    fields (printable characters).
+
    untaint_path
         my @untainted = untaint_path(LIST);
 
@@ -267,6 +291,14 @@ DESCRIPTION
 
     Passes through call to untaint_regex() using a RX suitable for Unix
     paths (everying except NULL).
+
+   untaint_radio_group
+        my @untainted = untaint_radio_group(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to untaint_regex() using a RX suitable for radio
+    groups (printable characters).
 
    untaint_regex
         my @untainted = untaint_regex(RX, LIST);
@@ -276,9 +308,9 @@ DESCRIPTION
         # LIST are strings to be untainted
 
     Applies regular expression to each element in LIST. If LIST is empty,
-    returns void. In list context, process LIST and return first captured
-    substrings for each LIST item. In scalar context, process first LIST
-    item and return first captured substring.
+    returns void. In list context, process LIST and returns list of first
+    captured substrings for each LIST item. In scalar context, process first
+    LIST item and returns first captured substring.
 
     Caller usually creates RX with the quote regular expression operator
     'qr()'.
@@ -310,9 +342,10 @@ DESCRIPTION
 
         # NAME is a CGI parameter name
 
-    Performs checkbox checks on CGI parameter with name NAME. Skips checks
-    if CGI parameter does not exist (e.g. empty or fresh hit). Returns error
-    strings if problems found.
+    If CGI parameter NAME has a defined value, verifies that its value
+    matches its untainted value. Returns list of error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -321,9 +354,11 @@ DESCRIPTION
 
         # NAME is a CGI parameter name
 
-    Performs hidden field checks on CGI parameter with name NAME. Skips
-    checks if no CGI parameters exist (e.g. fresh hit). Returns error
-    strings if problems found.
+    If CGI parameter NAME has a defined value, looks for corresponding
+    checksum CGI parameter and verifies checksum. Returns list of error
+    messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -332,9 +367,10 @@ DESCRIPTION
 
         # LIST are CGI parameter names
 
-    Checks that the CGI parameters with names in LIST are defined and have
-    values. Skips checks if no CGI parameters exist (e.g. fresh hit).
-    Returns list of error strings if problems found.
+    Verifies that CGI parameters named in LIST have defined values. Returns
+    list of error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -343,9 +379,26 @@ DESCRIPTION
 
         # NAME is a CGI parameter name
 
-    Performs password field checks on CGI parameter with name NAME. Skips
-    checks if CGI parameter does not exist (e.g. empty or fresh hit).
-    Returns error strings if problems found.
+    If CGI parameter NAME has a defined value, verifies that length does not
+    exceed $PASSWORD_FIELD_ARGS{-maxlength} and that value matches its
+    untainted value. Returns list of error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+
+    Calls Carp::confess() on error.
+
+   validate_radio_group
+        push @errors, validate_radio_group(NAME, VALUES);
+
+        # NAME is a CGI parameter nameo
+
+        # VALUES is list (or arrayref) of allowed values
+
+    If CGI parameter NAME has a defined value, verifies that value matches
+    untainted value and that value is one of listed VALUES. Returns list of
+    error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -354,9 +407,11 @@ DESCRIPTION
 
         # NAME is a CGI parameter name
 
-    Performs textarea checks on CGI parameter with name NAME. Skips checks
-    if parameter does not exist (e.g. empty or fresh hit). Returns error
-    strings if problems found.
+    If CGI parameter NAME has a defined value, verifies that length does not
+    exceed $TEXTAREA_ARGS{-maxlength} and that value matches its untainted
+    value. Returns list of error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -365,9 +420,11 @@ DESCRIPTION
 
         # NAME is a CGI parameter name
 
-    Performs textfield checks on CGI parameter with name NAME. Skips checks
-    if parameter does not exist (e.g. empty or fresh hit). and returns error
-    strings if problems found.
+    If CGI parameter NAME has a defined value, verifies that length does not
+    exceed $TEXTFIELD_ARGS{-maxlength} and that value matches its untainted
+    value. Returns list of error messages, if any.
+
+    Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
@@ -377,8 +434,6 @@ DESCRIPTION
     All of the subroutines may be imported by using the ':all' tag:
 
         use Dpchrist::CGI           qw( :all );
-
-    See 'perldoc Export' for everything in between.
 
 INSTALLATION
     Old school:
@@ -395,13 +450,6 @@ INSTALLATION
     Complete:
 
         $ cpan Bundle::Dpchrist
-
-    The following warning may be safely ignored:
-
-        Can't locate Dpchrist/Module/MakefilePL.pm in @INC (@INC contains: /
-        etc/perl /usr/local/lib/perl/5.10.0 /usr/local/share/perl/5.10.0 /us
-        r/lib/perl5 /usr/share/perl5 /usr/lib/perl/5.10 /usr/share/perl/5.10
-        /usr/local/lib/site_perl .) at Makefile.PL line 22.
 
   PREREQUISITES
     See Makefile.PL in the source distribution root directory.

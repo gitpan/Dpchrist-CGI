@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: untaint_regex.t,v 1.7 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_regex.t,v 1.8 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_regex().
 #
@@ -11,13 +11,14 @@ use warnings;
 
 use Test::More tests => 12;
 
-use Dpchrist::CGI		qw( untaint_regex );
+use Dpchrist::CGI		qw( untaint_regex $RX_PASSTHROUGH );
 
 use Capture::Tiny		qw( capture );
 use Carp;
 use Dpchrist::LangUtil		qw( :all );
 
-$| = 1;
+$|				= 1;
+$Data::Dumper::Sortkeys		= 1;
 
 my ($r, @r);
 my ($stdout, $stderr);
@@ -26,6 +27,9 @@ my @a = (
     join(' ', __FILE__, __LINE__),
     join(' ', __FILE__, __LINE__),
 );
+
+my $o  = bless {}, __FILE__ . __LINE__;
+my $o2 = bless {}, __FILE__ . __LINE__;
 
 $r = eval {
     untaint_regex;
@@ -48,7 +52,7 @@ ok(								#     2
 );
 
 $r = eval {
-    untaint_regex qr/(.*)/;
+    untaint_regex $RX_PASSTHROUGH;
 };
 ok(								#     3
     !$@
@@ -60,7 +64,7 @@ ok(								#     3
 );
 
 @r = eval {
-    untaint_regex qr/(.*)/;
+    untaint_regex $RX_PASSTHROUGH;
 };
 ok(								#     4
     !$@
@@ -73,7 +77,7 @@ ok(								#     4
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_regex qr/(.*)/, undef, undef;
+	untaint_regex $RX_PASSTHROUGH, undef, undef;
     };
 };
 ok(								#     5
@@ -89,7 +93,7 @@ ok(								#     5
 
 ($stdout, $stderr) = capture {
     @r = eval {
-	untaint_regex qr/(.*)/, undef, undef;
+	untaint_regex $RX_PASSTHROUGH, undef, undef;
     };
 };
 ok(								#     6
@@ -106,7 +110,7 @@ ok(								#     6
 );
 
 $r = eval {
-    untaint_regex(qr/(.*)/, '', '');
+    untaint_regex $RX_PASSTHROUGH, '', '';
 };
 ok(								#     7
     !$@
@@ -118,7 +122,7 @@ ok(								#     7
 );
 
 @r = eval {
-    untaint_regex(qr/(.*)/, '', '');
+    untaint_regex $RX_PASSTHROUGH, '', '';
 };
 ok(								#     8
     !$@
@@ -132,7 +136,7 @@ ok(								#     8
 );
 
 $r = eval {
-    untaint_regex(qr/(.*)/, @a);
+    untaint_regex $RX_PASSTHROUGH, @a;
 };
 ok(								#     9
     !$@
@@ -145,7 +149,7 @@ ok(								#     9
 );
 
 @r = eval {
-    untaint_regex(qr/(.*)/, @a);
+    untaint_regex $RX_PASSTHROUGH, @a;
 };
 ok(								#    10
     !$@
@@ -159,7 +163,7 @@ ok(								#    10
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_regex(qr/(.*)/, bless({}, 'Foo'), bless({}, 'Bar'));
+	untaint_regex $RX_PASSTHROUGH, $o, $o2;
     };
 };
 ok(								#    11
@@ -175,7 +179,7 @@ ok(								#    11
 
 ($stdout, $stderr) = capture {
     @r = eval {
-	untaint_regex(qr/(.*)/, bless({}, 'Foo'), bless({}, 'Bar'));
+	untaint_regex $RX_PASSTHROUGH, $o, $o2;
     };
 };
 ok(								#    12

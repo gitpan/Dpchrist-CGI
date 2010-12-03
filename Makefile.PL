@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.18 2010-12-01 18:31:57 dpchrist Exp $
+# $Id: Makefile.PL,v 1.19 2010-12-03 05:13:47 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -27,6 +27,8 @@ warn $@ if $@;
 
 eval {
     require Dpchrist::ExtUtils::MakeMaker;
+    die 'Requires Dpchrist::ExtUtils::MakeMaker 1.013 or higher'
+    	unless 1.013 <= $Dpchrist::ExtUtils::MakeMaker::VERSION;
     import  Dpchrist::ExtUtils::MakeMaker (
 	postamble => sub {
 	    my ($o, $prev) = @_;
@@ -47,15 +49,30 @@ WriteMakefile(
     VERSION_FROM	=> 'lib/Dpchrist/CGI.pm',
     ABSTRACT_FROM	=> 'lib/Dpchrist/CGI.pm',
     PREREQ_PM		=> {
-	Capture::Tiny		=> 0,
-	Dpchrist::Debug		=> 1.046,
-	Dpchrist::Is		=> 1.028,
-	Dpchrist::LangUtil	=> 1.014,
+	CGI				=> 0,
+	Capture::Tiny			=> 0,
+	Carp				=> 0,
+	Data::Dumper			=> 0,
+	Digest::MD5			=> 0,
+	Dpchrist::Debug			=> 1.047,
+	Dpchrist::ExtUtils::MakeMaker	=> 1.015,
+	Dpchrist::Is			=> 1.029,
+	Dpchrist::LangUtil		=> 1.015,
+	Exporter			=> 0,
+	ExtUtils::MakeMaker		=> 0,
+	Test::Compile			=> 0,
+	Test::Manifest			=> 0,
+	Test::More			=> 0,
+	Test::Pod			=> 0,
+	Test::Prereq			=> 0,
     },
     AUTHOR		=>
 	'David Paul Christensen <dpchrist@holgerdanske.com>',
     clean		=> {
 	FILES => q( *~tmp */*~tmp *.tar debug.log ),
+    },
+    realclean		=> {
+	FILES => q( README *.html *.tar.gz ),
     },
 );
 

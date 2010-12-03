@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: validate_textarea.t,v 1.2 2010-11-24 22:12:25 dpchrist Exp $
+# $Id: validate_textarea.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_textarea().
 #
@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-use Test::More tests		=> 8;
+use Test::More tests		=> 10;
 
 use Dpchrist::CGI		qw( %TEXTAREA_ARGS validate_textarea );
 
@@ -78,7 +78,7 @@ ok(								#     4
 ok(								#     5
     !$@
     && @r == 0,
-    'call for non-existant CGI parameter should return empty list'
+    'call when no CGI parameters should return empty list'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
 );
@@ -86,9 +86,24 @@ ok(								#     5
 @r = eval {
     $s = join(' ', __FILE__, __LINE__);
     param(-name => $s, -value => '');
-    validate_textarea $s;
+    $s2 = join(' ', __FILE__, __LINE__);
+    validate_textarea $s2;
 };
 ok(								#     6
+    !$@
+    && @r == 0,
+    'call for missing CGI parameter ' .
+    'should return empty list'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+);
+
+@r = eval {
+    $s = join(' ', __FILE__, __LINE__);
+    param(-name => $s, -value => '');
+    validate_textarea $s;
+};
+ok(								#     7
     !$@
     && @r == 0,
     'call for CGI parameter containing empty string ' .
@@ -103,7 +118,7 @@ ok(								#     6
     param(-name => $s, -value => $s2);
     validate_textarea $s;
 };
-ok(								#     7
+ok(								#     8
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s' is too long/,
@@ -118,7 +133,7 @@ ok(								#     7
     param(-name => $s, -value => $bad);
     validate_textarea $s;
 };
-ok(								#     8
+ok(								#     9
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
@@ -126,5 +141,23 @@ ok(								#     8
     'should return error message'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $bad, $s, \@r], [qw(@ bad s *r)]),
+);
+
+@r = eval {
+    $s = join(' ', __FILE__, __LINE__);
+    $s2 = join("\n",
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
+    );
+    param(-name => $s, -value => $s2);
+    validate_textarea $s;
+};
+ok(								#    10
+    !$@
+    && @r == 0,
+    'call for with good CGI parameter should return empty array'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
 );
 

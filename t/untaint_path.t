@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: untaint_path.t,v 1.6 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_path.t,v 1.7 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_path().
 #
@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-use Test::More tests			=> 4;
+use Test::More tests			=> 6;
 
 use Dpchrist::CGI			qw( untaint_path );
 
@@ -23,13 +23,16 @@ $Data::Dumper::Sortkeys			= 1;
 my ($r, @r, $s);
 my ($stdout, $stderr);
 
+my $good = '/tmp';
+my $bad = "\x00";
+
 $r = eval {
     untaint_path;
 };
 ok(								#     1
     !$@
     && !defined $r,
-    'call without arguments in scalar context should return'
+    'call without arguments should return undef'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
@@ -50,29 +53,48 @@ ok(								#     2
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    untaint_path $s;
+    untaint_path '';
 };
 ok(								#     3
     !$@
-    && $r
-    && $r eq $s,
-    'call on string should return string'
+    && defined($r)
+    && $r eq '',
+    'call on empty string should return empty string'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    untaint_path "\x00" . $s . "\x00";
+    untaint_path $bad;
 };
 ok(								#     4
     !$@
-    && $r
-    && $r eq $s,
-    'call on string with leading and training nulls ' .
-    'should return string'
+    && !defined($r),
+    'call on null should return undef'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+    Data::Dumper->Dump([$@, $bad, $r], [qw(@ bad r)]),
+);
+
+$r = eval {
+    untaint_path $good . $bad;
+};
+ok(								#     5
+    !$@
+    && !defined($r),
+    'call on good value with training null should return undef'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $bad, $good, $r], [qw(@ bad good r)]),
+);
+
+$r = eval {
+    untaint_path $good;
+};
+ok(								#     6
+    !$@
+    && defined($r)
+    && $r eq $good,
+    'call on good value should return value'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $good, $r], [qw(@ good r)]),
 );
 

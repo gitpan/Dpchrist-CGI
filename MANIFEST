@@ -18,17 +18,23 @@ t/get_cookies_as_rhh.t
 t/get_params_as_rha.t
 t/merge_args.t
 t/merge_attr.t
+t/nbsp.t
 t/test-compile-all_pm_files_ok.t
 t/test-pod-all_pod_files_ok.t
 t/test-prereq-prereq_ok.t
 t/test_manifest
+t/untaint_checkbox.t
+t/untaint_password_field.t
 t/untaint_path.t
+t/untaint_radio_group.t
 t/untaint_regex.t
 t/untaint_textarea.t
 t/untaint_textfield.t
+t/validate_checkbox.t
 t/validate_hidden.t
 t/validate_parameter_present.t
 t/validate_password_field.t
+t/validate_radio_group.t
 t/validate_textarea.t
 t/validate_textfield.t
 META.yml                                 Module meta-data (added by MakeMaker)

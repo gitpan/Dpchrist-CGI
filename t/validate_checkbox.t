@@ -1,7 +1,7 @@
 #######################################################################
-# $Id: validate_textfield.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: validate_checkbox.t,v 1.1 2010-12-02 19:17:02 dpchrist Exp $
 #
-# Test script for Dpchrist::CGI::validate_textfield().
+# Test script for Dpchrist::CGI::validate_checkbox().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
@@ -9,10 +9,10 @@
 use strict;
 use warnings;
 
-use Test::More tests		=> 10;
+use Test::More tests		=> 9;
 
-use Dpchrist::CGI		qw( %TEXTFIELD_ARGS
-				    validate_textfield );
+use Dpchrist::CGI		qw( %CHECKBOX_ARGS
+				    validate_checkbox );
 
 use Carp;
 use CGI				qw( :standard );
@@ -23,15 +23,16 @@ $Data::Dumper::Sortkeys		= 1;
 
 my (@r, $s, $s2);
 
-my $bad;
+my $good = $CHECKBOX_ARGS{-value} || 'on';
 
+my $bad;
 for (my $i = 0; $i < 32; $i++) {
     $bad .= chr($i);
 }
 $bad .= chr(127);
 
 @r = eval {
-    validate_textfield();
+    validate_checkbox;
 };
 ok(								#     1
     $@ =~ 'ERROR: requires one argument',
@@ -41,7 +42,7 @@ ok(								#     1
 );
 
 @r = eval {
-    validate_textfield undef;
+    validate_checkbox undef;
 };
 ok(								#     2
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -51,7 +52,7 @@ ok(								#     2
 );
 
 @r = eval {
-    validate_textfield '';
+    validate_checkbox '';
 };
 ok(								#     3
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -61,7 +62,7 @@ ok(								#     3
 );
 
 @r = eval {
-    validate_textfield bless({}, 'Foo');
+    validate_checkbox bless({}, 'Foo');
 };
 ok(								#     4
     $@ =~ 'ERROR: argument must be a CGI parameter name',
@@ -71,66 +72,52 @@ ok(								#     4
 );
 
 @r = eval {
-    validate_textfield 'foo';
+    my $s = join ' ', __FILE__, __LINE__;
+    validate_checkbox $s;
 };
-ok(								#     5
+ok (								#     5
     !$@
     && @r == 0,
-    'call when no CGI parameters should return empty list'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    'call when no CGI parameters should return empty array'
+) or confess join(' ', __FILE__, __LINE__,
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
 );
 
 @r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => '');
-    $s2 = join(' ', __FILE__, __LINE__);
-    validate_textfield $s2;
+    $s = join ' ', __FILE__, __LINE__;
+    param(-name => $s, -value => ' ');
+    $s2 = join ' ', __FILE__, __LINE__;
+    validate_checkbox $s2;
 };
 ok(								#     6
     !$@
     && @r == 0,
-    'call for missing CGI parameter should return empty list'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => '');
-    validate_textfield $s;
-};
-ok(								#     7
-    !$@
-    && @r == 0,
-    'call for CGI parameter containing empty string ' .
-    'should return empty list'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    $s2 = '123456789 ' x (1 + $TEXTFIELD_ARGS{-maxlength}/10);
-    param(-name => $s, -value => $s2);
-    validate_textfield $s;
-};
-ok(								#     8
-    !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' is too long/,
-    'call for CGI parameter with too long value ' .
-    'should return error message'
+    'call for non-existent CGI parameter should return empty list'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
 );
 
 @r = eval {
     $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => $bad);
-    validate_textfield $s;
+    param(-name => $s, -value => '');
+    validate_checkbox $s;
 };
-ok(								#     9
+ok(								#     7
+    !$@
+    && @r == 1
+    && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
+    'call for CGI parameter containing empty string ' .
+    'should return error message'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+);
+
+@r = eval {
+    $s = join(' ', __FILE__, __LINE__);
+    param(-name => $s, -value => $bad);
+    validate_checkbox $s;
+};
+ok(								#     8
     !$@
     && @r == 1
     && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
@@ -141,16 +128,16 @@ ok(								#     9
 );
 
 @r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    $s2 = join ' ', __FILE__, __LINE__; 
-    param(-name => $s, -value => $s2);
-    validate_textfield $s;
+    $s = join(' ', __FILE__, __LINE__);
+    param(-name => $s, -value => $good);
+    validate_checkbox $s;
 };
-ok(								#    10
+ok(								#     9
     !$@
     && @r == 0,
-    'call for good CGI parameter should return empty array'
+    'call for CGI parameter with good value ' .
+    'should return empty array'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
+    Data::Dumper->Dump([$@, $good, $s, \@r], [qw(@ good s *r)]),
 );
 

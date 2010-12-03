@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: validate_hidden.t,v 1.2 2010-11-25 01:46:07 dpchrist Exp $
+# $Id: validate_hidden.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for validate_hidden().
 #
@@ -43,14 +43,30 @@ ok (								#     2
 );
 
 @r = eval {
-    validate_hidden 'foo';
+    my $s = join ' ', __FILE__, __LINE__;
+    validate_hidden $s;
 };
 ok (								#     3
     !$@
     && @r == 0,
-    'call with no CGI parameters should return void'
+    'call with no CGI parameters should return empty string'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+);
+
+@r = eval {
+    $s = join ' ', __FILE__, __LINE__;
+    param(-name => $s, -value => '');
+    $s2 = join ' ', __FILE__, __LINE__;
+    validate_hidden $s2;
+};
+ok (								#     4
+    !$@
+    && @r == 1
+    &&$r[0] =~ /ERROR: parameter '$s2' missing/,
+    'call on unknown CGI parameter should return error message'
+) or confess join(' ', __FILE__, __LINE__,
+    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
 );
 
 @r = eval {
@@ -58,18 +74,6 @@ ok (								#     3
     $s2 = join ' ', __FILE__, __LINE__;
     @a = (-name => $s, -value => $s2);
     param(@a);
-    validate_hidden 'foo';
-};
-ok (								#     4
-    !$@
-    && @r == 1
-    &&$r[0] =~ /ERROR: parameter 'foo' missing/,
-    'call on unknown CGI parameter should return error message'
-) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, $s2, \@a, \@r], [qw(@ s s2 a *r)]),
-);
-
-@r = eval {
     validate_hidden $s;
 };
 ok (								#     5

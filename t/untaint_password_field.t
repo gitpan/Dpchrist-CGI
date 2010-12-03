@@ -1,7 +1,7 @@
 #######################################################################
-# $Id: untaint_textarea.t,v 1.4 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: untaint_password_field.t,v 1.1 2010-12-02 19:17:02 dpchrist Exp $
 #
-# Test script for Dpchrist::CGI::untaint_textarea().
+# Test script for Dpchrist::CGI::untaint_password_field().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
@@ -11,7 +11,7 @@ use warnings;
 
 use Test::More tests			=> 6;
 
-use Dpchrist::CGI			qw( untaint_textarea );
+use Dpchrist::CGI			qw( untaint_password_field );
 
 use Capture::Tiny			qw ( capture );
 use Carp;
@@ -23,21 +23,16 @@ $Data::Dumper::Sortkeys			= 1;
 my ($r, @r, $s);
 my ($stdout, $stderr);
 
-my $good = join("\n",
-    __FILE__ . __LINE__,
-    __FILE__ . __LINE__,
-    __FILE__ . __LINE__,
-);
+my $good = join ' ', __FILE__, __LINE__;
 
 my $bad;
 for (my $i = 0; $i < 32; $i++) {
-    next if $i == 10 || $i == 13;
     $bad .= chr($i);
 }
 $bad .= chr(127);
 
 $r = eval {
-    untaint_textarea;
+    untaint_password_field;
 };
 ok(								#     1
     !$@
@@ -49,7 +44,7 @@ ok(								#     1
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_textarea undef;
+	untaint_password_field undef;
     };
 };
 ok(								#     2
@@ -63,7 +58,7 @@ ok(								#     2
 );
 
 $r = eval {
-    untaint_textarea '';
+    untaint_password_field '';
 };
 ok(								#     3
     !$@
@@ -71,41 +66,41 @@ ok(								#     3
     && $r eq '',
     'call on empty string should return empty string'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
 $r = eval {
-    untaint_textarea $bad;
+    untaint_password_field $bad;
 };
 ok(								#     4
     !$@
     && !defined($r),
-    'call on invalid characters should return undef'
+    'call on control characters should return undef'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $bad, $r], [qw(@ bad r)]),
 );
 
 $r = eval {
-    untaint_textarea $good . $bad;
+    untaint_password_field $good . $bad;
 };
 ok(								#     5
     !$@
     && !defined($r),
-    'call on good string with trailing invalid characters ' .
+    'call on good value with trailing control characters ' .
     'should return undef'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $good, $bad, $r], [qw(@ good bad r)]),
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
 );
 
 $r = eval {
-    untaint_textarea $good;
+    untaint_password_field $good;
 };
 ok(								#     6
     !$@
     && defined($r)
     && $r eq $good,
-    'call on good string should return string'
+    'call on good value should return value'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $good, $r], [qw(@ good r)]),
+    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
 );
 

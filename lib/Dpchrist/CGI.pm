@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.47 2010-11-30 20:20:14 dpchrist Exp $
+# $Id: CGI.pm,v 1.50 2010-12-03 05:13:47 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -19,6 +19,14 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	%CHECKBOX_ARGS
 	$CHECKSUM_SALT
 	%PASSWORD_FIELD_ARGS
+	$RX_PASSTHROUGH
+	$RX_UNTAINT_CHECKBOX
+	$RX_UNTAINT_PASSWORD_FIELD
+	$RX_UNTAINT_PATH
+	$RX_UNTAINT_RADIO_GROUP
+	$RX_UNTAINT_TEXTAREA
+	$RX_UNTAINT_TEXTFIELD
+	%TD_ATTR
 	%TEXTAREA_ARGS
 	%TEXTFIELD_ARGS
 	%TH_ATTR
@@ -28,17 +36,19 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	gen_checkbox
 	gen_hidden
 	gen_password_field
-	gen_textarea
 	gen_td
+	gen_textarea
 	gen_textfield
 	gen_th
-	get_params_as_rha
 	get_cookies_as_rhh
+	get_params_as_rha
 	merge_args
 	merge_attr
 	nbsp
 	untaint_checkbox
+	untaint_password_field
 	untaint_path
+	untaint_radio_group
 	untaint_regex
 	untaint_textarea
 	untaint_textfield
@@ -46,6 +56,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	validate_hidden
 	validate_parameter_present
 	validate_password_field
+	validate_radio_group
 	validate_textarea
 	validate_textfield
 ) ] );
@@ -54,7 +65,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.47 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.50 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -66,6 +77,7 @@ use Data::Dumper;
 use Digest::MD5			qw( md5_hex );
 use Dpchrist::Debug		qw( :all );
 use Dpchrist::Is		qw( :all );
+use Dpchrist::LangUtil		qw( :all );
 
 #######################################################################
 
@@ -76,7 +88,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.47 $.
+This documentation describes module revision $Revision: 1.50 $.
 
 
 This is alpha test level software
@@ -121,7 +133,7 @@ our $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
 	-maxlength => 80,
     );
 
-Default argments used by gen_password().
+Default argments used by gen_password_field().
 
 =cut
 
@@ -132,51 +144,87 @@ our %PASSWORD_FIELD_ARGS = (
 
 #----------------------------------------------------------------------
 
-=head3 $RX_UNTAINT_CHECKBOX
+=head3 $RX_PASSTHROUGH
 
-    $RX_UNTAINT_CHECKBOX = qr/(on)/;
+    $RX_PASSTHROUGH    => qr/^(.*)$/;
 
-Regular expression used for untainting paths.
+Pass-through regular expression for testing.
 
 =cut
 
-our $RX_UNTAINT_CHECKBOX = qr/(on)/;
+our $RX_PASSTHROUGH    = qr/^(.*)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_CHECKBOX
+
+    $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
+
+Regular expression used for untainting checkbox parameter values.
+
+=cut
+
+our $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_PASSWORD_FIELD
+
+    $RX_UNTAINT_PASSWORD_FIELD = qr/^([\PC]*)$/;
+
+Regular expression used for untainting password field parameter values.
+
+=cut
+
+our $RX_UNTAINT_PASSWORD_FIELD	= qr/^([\PC]*)$/;
 
 #----------------------------------------------------------------------
 
 =head3 $RX_UNTAINT_PATH
 
-    $RX_UNTAINT_PATH = qr/([^\x00]+)/;
+    $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
 
 Regular expression used for untainting paths.
 
 =cut
 
-our $RX_UNTAINT_PATH = qr/([^\x00]+)/;
+our $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_RADIO_GROUP
+
+    $RX_UNTAINT_RADIO_GROUP = qr/^([\PC]*)$/;
+
+Regular expression used for untainting radio group parameter values.
+
+=cut
+
+our $RX_UNTAINT_RADIO_GROUP	= qr/^([\PC]*)$/;
 
 #----------------------------------------------------------------------
 
 =head3 $RX_UNTAINT_TEXTAREA
     
-    $RX_UNTAINT_TEXTAREA = qr/([\PC\n\r]+)/;
+    $RX_UNTAINT_TEXTAREA = qr/^([\PC\n\r]*)$/;
 
-Regular expression used for untainting textareas.
+Regular expression used for untainting textarea parameter values.
 
 =cut
 
-our $RX_UNTAINT_TEXTAREA	= qr/([\PC\n\r]+)/;
+our $RX_UNTAINT_TEXTAREA	= qr/^([\PC\n\r]*)$/;
 
 #----------------------------------------------------------------------
 
 =head3 $RX_UNTAINT_TEXTFIELD
 
-    $RX_UNTAINT_TEXTFIELD = qr/([\PC]+)/;
+    $RX_UNTAINT_TEXTFIELD = qr/^([\PC]*)$/;
 
-Regular expression used for untainting textfields and password fields.
+Regular expression used for untainting textfield parameter values.
 
 =cut
 
-our $RX_UNTAINT_TEXTFIELD	= qr/([\PC]+)/;
+our $RX_UNTAINT_TEXTFIELD	= qr/^([\PC]*)$/;
 
 #----------------------------------------------------------------------
 
@@ -262,7 +310,7 @@ our %TH_ATTR = (
 
 =cut
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 calc_checksum
 
@@ -282,6 +330,8 @@ for each hit (?).
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub calc_checksum
 {
@@ -309,7 +359,7 @@ sub calc_checksum
     return $md5;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 dump_cookies
 
@@ -321,6 +371,8 @@ and returns the result.
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub dump_cookies
 {
     my $cookies = get_cookies_as_rhh();
@@ -328,7 +380,7 @@ sub dump_cookies
     return Data::Dumper->Dump([$cookies], [qw(cookies)]);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 dump_params
 
@@ -344,6 +396,8 @@ and returns the result.
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub dump_params
 {
     my $params = get_params_as_rha(@_);
@@ -351,7 +405,7 @@ sub dump_params
     return Data::Dumper->Dump([$params], [qw(params)]);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_checkbox
 
@@ -366,6 +420,8 @@ and passes through call with net arguments to CGI::checkbox().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_checkbox
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -377,7 +433,7 @@ sub gen_checkbox
     CGI::checkbox(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_hidden
 
@@ -400,6 +456,8 @@ with $CHECKSUM_SALT and incoming arguments.
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub gen_hidden
 {
@@ -450,7 +508,7 @@ sub gen_hidden
     return @html;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_password_field
 
@@ -465,6 +523,8 @@ and passes through call with net arguments to CGI::password_field().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_password_field
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -476,7 +536,7 @@ sub gen_password_field
     CGI::password_field(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_td
 
@@ -498,6 +558,8 @@ to CGI::td().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_td
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -509,7 +571,7 @@ sub gen_td
     CGI::td(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_textarea
 
@@ -526,6 +588,8 @@ to CGI::textarea().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_textarea
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -537,7 +601,7 @@ sub gen_textarea
     CGI::textarea(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_textfield
 
@@ -554,6 +618,8 @@ to CGI::textfield().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_textfield
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -565,7 +631,7 @@ sub gen_textfield
     CGI::textfield(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 gen_th
 
@@ -587,6 +653,8 @@ to CGI::th().
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub gen_th
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
@@ -598,7 +666,7 @@ sub gen_th
     CGI::th(@_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 get_cookies_as_rhh
 
@@ -608,6 +676,8 @@ Calls CGI::cookie() in list context for all CGI cookies
 and returns a reference to a hash-of-hashes data structure.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub get_cookies_as_rhh
 {
@@ -620,7 +690,7 @@ sub get_cookies_as_rhh
     return $cookies;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 get_params_as_rha
 
@@ -636,6 +706,8 @@ and returns a hash-of-arrays data structure.
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub get_params_as_rha
 {
@@ -660,7 +732,7 @@ sub get_params_as_rha
     return $rha;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 merge_args
 
@@ -681,6 +753,8 @@ Returns void.
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub merge_args
 {
@@ -707,7 +781,7 @@ sub merge_args
     return;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 merge_attr
 
@@ -725,13 +799,14 @@ Typically used with CGI.pm tag generating functions,
 such as td().
 First element of referenced array
 may be created or modified in the process.
-Returns void.
 Doesn't bother to merge if reference array is empty.
 Returns void.
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub merge_attr
 {
@@ -772,7 +847,7 @@ sub merge_attr
     return;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 nbsp
 
@@ -782,11 +857,14 @@ sub merge_attr
 
     # EXPR (optional) is a whole number
 
-Returns one or more nonbreaking space HTML character entities.
+Returns zero or more non-breaking space HTML character entities.
+Call without arguments returns one non-breaking space.
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub nbsp
 {
@@ -795,14 +873,14 @@ sub nbsp
 	Data::Dumper->Dump([\@_], [qw(*_)]),
     ) if @_ && !is_wholenumber($_[0]);
 
-    my $n = shift || 1;
+    my $n = defined_or(shift, 1);
 
-    my $s = '&nbsp; ';
+    my $s = '&nbsp;';
 
     return $s x $n;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 untaint_checkbox
 
@@ -816,6 +894,8 @@ using a RX suitable for checkboxs
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub untaint_checkbox
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
@@ -824,7 +904,31 @@ sub untaint_checkbox
     return untaint_regex($RX_UNTAINT_CHECKBOX, @_);
 }
 
+#======================================================================
+
+=head3 untaint_password_field
+
+    my @untainted = untaint_password_field(LIST);
+
+    # LIST are strings to be untainted
+
+Passes through call to untaint_regex()
+using a RX suitable for password fields
+(printable characters).
+
+=cut
+
 #----------------------------------------------------------------------
+
+sub untaint_password_field
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex($RX_UNTAINT_PASSWORD_FIELD, @_);
+}
+
+#======================================================================
 
 =head3 untaint_path
 
@@ -838,6 +942,8 @@ using a RX suitable for Unix paths
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub untaint_path
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
@@ -846,7 +952,31 @@ sub untaint_path
     return untaint_regex($RX_UNTAINT_PATH, @_);
 }
 
+#======================================================================
+
+=head3 untaint_radio_group
+
+    my @untainted = untaint_radio_group(LIST);
+
+    # LIST are strings to be untainted
+
+Passes through call to untaint_regex()
+using a RX suitable for radio groups
+(printable characters).
+
+=cut
+
 #----------------------------------------------------------------------
+
+sub untaint_radio_group
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    dprint('passing through call to untaint_regex()') if DEBUG;
+    return untaint_regex($RX_UNTAINT_RADIO_GROUP, @_);
+}
+
+#======================================================================
 
 =head3 untaint_regex
 
@@ -859,9 +989,9 @@ sub untaint_path
 Applies regular expression to each element in LIST.
 If LIST is empty, returns void.
 In list context, process LIST
-and return first captured substrings for each LIST item.
+and returns list of first captured substrings for each LIST item.
 In scalar context, process first LIST item
-and return first captured substring.
+and returns first captured substring.
 
 Caller usually creates RX with
 the quote regular expression operator 'qr()'.
@@ -874,6 +1004,8 @@ Calls Carp::cluck() if LIST contains undefined values
 or references.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub untaint_regex
 {
@@ -914,7 +1046,7 @@ sub untaint_regex
     return;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 untaint_textarea
 
@@ -928,6 +1060,8 @@ using a RX suitable for text areas
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub untaint_textarea
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
@@ -936,7 +1070,7 @@ sub untaint_textarea
     return untaint_regex($RX_UNTAINT_TEXTAREA, @_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 untaint_textfield
 
@@ -950,6 +1084,8 @@ using a RX suitable for textfields
 
 =cut
 
+#----------------------------------------------------------------------
+
 sub untaint_textfield
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
@@ -958,7 +1094,7 @@ sub untaint_textfield
     return untaint_regex($RX_UNTAINT_TEXTFIELD, @_);
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 validate_checkbox
 
@@ -966,14 +1102,17 @@ sub untaint_textfield
 
     # NAME is a CGI parameter name
 
-Performs checkbox checks on 
-CGI parameter with name NAME.
-Skips checks if CGI parameter does not exist (e.g. empty or fresh hit).
-Returns error strings if problems found.
+If CGI parameter NAME has a defined value,
+verifies that its value matches its untainted value.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_checkbox
 {
@@ -989,22 +1128,27 @@ sub validate_checkbox
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless is_nonempty_string $_[0];
 
-    my $name = shift;
-    my $p = param($name);
     my @errors;
 
-    if ($p) {
+    goto DONE unless param();
+
+    my $name = shift;
+    my $p = param($name);
+
+    if (defined $p) {
 	my $u = untaint_checkbox($p);
 	push @errors, (
 	    "ERROR: parameter '$name' contains invalid characters",
-	) unless $u && $p eq $u;
+	) unless defined($u) && $p eq $u;
     }
+
+  DONE:
 
     ddump('return', [\@errors], [qw(errors)]) if DEBUG;
     return @errors;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 validate_hidden
 
@@ -1012,14 +1156,18 @@ sub validate_checkbox
 
     # NAME is a CGI parameter name
 
-Performs hidden field checks on
-CGI parameter with name NAME.
-Skips checks if no CGI parameters exist (e.g. fresh hit).
-Returns error strings if problems found.
+If CGI parameter NAME has a defined value,
+looks for corresponding checksum CGI parameter
+and verifies checksum.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_hidden
 {
@@ -1030,20 +1178,18 @@ sub validate_hidden
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless @_ == 1;
 
-    my ($name) = @_;
-    ddump([$name], [qw(name)]) if DEBUG;
-
     confess join(' ',
-	"ERROR: argument must be a CGI parameter name",
-	Data::Dumper->Dump([\@_], [qw(*_)]),
-    ) unless is_nonempty_string($name);
+	'ERROR: argument must be a CGI parameter name',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_nonempty_string $_[0];
 
     my @errors;
 
     goto DONE unless param();
 
+    my $name = shift;
     my @value = param($name);
-    ddump([\@value], [qw(*value)]) if DEBUG;
+    ddump([$name, \@value], [qw(name *value)]) if DEBUG;
 
     unless (@value) {
 	push @errors, "ERROR: parameter '$name' missing";
@@ -1073,7 +1219,7 @@ sub validate_hidden
     return @errors;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 validate_parameter_present
 
@@ -1081,14 +1227,17 @@ sub validate_hidden
 
     # LIST are CGI parameter names
 
-Checks that the CGI parameters with names in LIST
-are defined and have values.
-Skips checks if no CGI parameters exist (e.g. fresh hit).
-Returns list of error strings if problems found.
+Verifies that CGI parameters named in LIST
+have defined values.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_parameter_present
 {
@@ -1121,7 +1270,7 @@ sub validate_parameter_present
     return @errors;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 validate_password_field
 
@@ -1129,14 +1278,18 @@ sub validate_parameter_present
 
     # NAME is a CGI parameter name
 
-Performs password field checks on 
-CGI parameter with name NAME.
-Skips checks if CGI parameter does not exist (e.g. empty or fresh hit).
-Returns error strings if problems found.
+If CGI parameter NAME has a defined value,
+verifies that length does not exceed $PASSWORD_FIELD_ARGS{-maxlength}
+and that value matches its untainted value.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_password_field
 {
@@ -1152,26 +1305,101 @@ sub validate_password_field
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless is_nonempty_string $_[0];
 
-    my $name = shift;
-    my $p = param($name);
     my @errors;
 
-    if ($p) {
+    goto DONE unless param();
+
+    my $name = shift;
+    my $p = param($name);
+
+    if (defined $p) {
 	push @errors, (
 	    "ERROR: parameter '$name' is too long",
 	) if $PASSWORD_FIELD_ARGS{-maxlength} < length $p;
 
-	my $u = untaint_textfield($p);
+	my $u = untaint_password_field($p);
 	push @errors, (
 	    "ERROR: parameter '$name' contains invalid characters",
-	) unless $u && $p eq $u;
+	) unless defined($u) && $p eq $u;
     }
+
+  DONE:
 
     ddump('return', [\@errors], [qw(errors)]) if DEBUG;
     return @errors;
 }
 
+#======================================================================
+
+=head3 validate_radio_group
+
+    push @errors, validate_radio_group(NAME, VALUES);
+
+    # NAME is a CGI parameter nameo
+
+    # VALUES is list (or arrayref) of allowed values
+
+If CGI parameter NAME has a defined value,
+verifies that value matches untainted value
+and that value is one of listed VALUES.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
+
+Calls Carp::confess() on error.
+
+=cut
+
 #----------------------------------------------------------------------
+
+sub validate_radio_group
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    confess join(' ',
+	'ERROR: requires at least three arguments',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless 1 < @_ && ref($_[1]) eq 'ARRAY' && 1 < @{$_[1]}
+	  || 2 < @_;
+
+    confess join(' ',
+	'ERROR: first argument must be a CGI parameter name',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_nonempty_string $_[0];
+
+    my @errors;
+
+    goto DONE unless param();
+
+    my $name = shift;
+    my @values = ref($_[0]) ? @{$_[0]} : @_;
+    my $p = param($name);
+
+    if (defined $p) {
+	my $u = untaint_radio_group($p);
+
+	unless (defined($u) && $p eq $u) {
+	    push @errors, join(' ',
+		"ERROR: parameter '$name' contains invalid characters"
+	    );
+	    goto DONE;
+	}
+
+	push @errors, join(' ',
+	    "ERROR: parameter '$name' contains invalid value",
+	) unless grep {defined($u) && $_ eq $u} @values;
+    }
+    else {
+	push @errors, "ERROR: parameter '$name' missing";
+    }
+
+  DONE:
+
+    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
+    return @errors;
+}
+
+#======================================================================
 
 =head3 validate_textarea
 
@@ -1179,14 +1407,18 @@ sub validate_password_field
 
     # NAME is a CGI parameter name
 
-Performs textarea checks
-on CGI parameter with name NAME.
-Skips checks if parameter does not exist (e.g. empty or fresh hit).
-Returns error strings if problems found.
+If CGI parameter NAME has a defined value,
+verifies that length does not exceed $TEXTAREA_ARGS{-maxlength}
+and that value matches its untainted value.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_textarea
 {
@@ -1202,11 +1434,14 @@ sub validate_textarea
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless is_nonempty_string $_[0];
 
-    my $name = shift;
-    my $p = param($name);
     my @errors;
 
-    if ($p) {
+    goto DONE unless param();
+
+    my $name = shift;
+    my $p = param($name);
+
+    if (defined $p) {
 	push @errors, (
 	    "ERROR: parameter '$name' is too long",
 	) if $TEXTAREA_ARGS{-maxlength} < length $p;
@@ -1214,14 +1449,16 @@ sub validate_textarea
 	my $u = untaint_textarea($p);
 	push @errors, (
 	    "ERROR: parameter '$name' contains invalid characters",
-	) unless $u && $p eq $u;
+	) unless defined($u) && $p eq $u;
     }
+
+  DONE:
 
     ddump('return', [\@errors], [qw(errors)]) if DEBUG;
     return @errors;
 }
 
-#----------------------------------------------------------------------
+#======================================================================
 
 =head3 validate_textfield
 
@@ -1229,14 +1466,18 @@ sub validate_textarea
 
     # NAME is a CGI parameter name
 
-Performs textfield checks
-on CGI parameter with name NAME.
-Skips checks if parameter does not exist (e.g. empty or fresh hit).
-and returns error strings if problems found.
+If CGI parameter NAME has a defined value,
+verifies that length does not exceed $TEXTFIELD_ARGS{-maxlength}
+and that value matches its untainted value.
+Returns list of error messages, if any.
+
+Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
 =cut
+
+#----------------------------------------------------------------------
 
 sub validate_textfield
 {
@@ -1252,11 +1493,14 @@ sub validate_textfield
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless is_nonempty_string $_[0];
 
-    my $name = shift;
-    my $p = param($name);
     my @errors;
 
-    if ($p) {
+    goto DONE unless param();
+
+    my $name = shift;
+    my $p = param($name);
+
+    if (defined $p) {
 	push @errors, (
 	    "ERROR: parameter '$name' is too long",
 	) if $TEXTFIELD_ARGS{-maxlength} < length $p;
@@ -1264,8 +1508,10 @@ sub validate_textfield
 	my $u = untaint_textfield($p);
 	push @errors, (
 	    "ERROR: parameter '$name' contains invalid characters",
-	) unless $u && $p eq $u;
+	) unless defined($u) && $p eq $u;
     }
+
+  DONE:
 
     ddump('return', [\@errors], [qw(errors)]) if DEBUG;
     return @errors;
@@ -1289,8 +1535,6 @@ All of the subroutines may be imported by using the ':all' tag:
 
     use Dpchrist::CGI		qw( :all ); 
 
-See 'perldoc Export' for everything in between.
-
 
 =head1 INSTALLATION
 
@@ -1308,13 +1552,6 @@ Minimal:
 Complete:
 
     $ cpan Bundle::Dpchrist
-
-The following warning may be safely ignored:
-
-    Can't locate Dpchrist/Module/MakefilePL.pm in @INC (@INC contains: /
-    etc/perl /usr/local/lib/perl/5.10.0 /usr/local/share/perl/5.10.0 /us
-    r/lib/perl5 /usr/share/perl5 /usr/lib/perl/5.10 /usr/share/perl/5.10
-    /usr/local/lib/site_perl .) at Makefile.PL line 22.
 
 
 =head2 PREREQUISITES

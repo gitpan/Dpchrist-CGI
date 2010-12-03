@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: untaint_textfield.t,v 1.3 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: untaint_textfield.t,v 1.4 2010-12-02 19:17:02 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_textfield().
 #
@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-use Test::More tests			=> 4;
+use Test::More tests			=> 6;
 
 use Dpchrist::CGI			qw( untaint_textfield );
 
@@ -23,8 +23,9 @@ $Data::Dumper::Sortkeys			= 1;
 my ($r, @r, $s);
 my ($stdout, $stderr);
 
-my $bad;
+my $good = join(' ', __FILE__, __LINE__);
 
+my $bad;
 for (my $i = 0; $i < 32; $i++) {
     $bad .= chr($i);
 }
@@ -57,29 +58,49 @@ ok(								#     2
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    untaint_textfield $s;
+    untaint_textfield '';
 };
 ok(								#     3
     !$@
-    && $r
-    && $r eq $s,
-    'call on string should return string'
+    && defined($r)
+    && $r eq '',
+    'call on empty string should return empty string'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    untaint_textfield $bad . $s . $bad;
+    untaint_textfield $bad;
 };
 ok(								#     4
     !$@
-    && $r
-    && $r eq $s,
-    'call on string with leading and trailing control characters ' .
-    'should return string'
+    && !defined($r),
+    'call on invalid characters should return undef'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $r], [qw(@ s r)]),
+    Data::Dumper->Dump([$@, $bad, $r], [qw(@ bad r)]),
+);
+
+$r = eval {
+    untaint_textfield $good . $bad;
+};
+ok(								#     5
+    !$@
+    && !defined($r),
+    'call on good string with trailing invalid characters ' .
+    'should return undef'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $bad, $r], [qw(@ bad r)]),
+);
+
+$r = eval {
+    untaint_textfield $good;
+};
+ok(								#     6
+    !$@
+    && defined($r)
+    && $r eq $good,
+    'call on good string should return string'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $bad, $r], [qw(@ bad r)]),
 );
 
