@@ -4,6 +4,11 @@ README
 Makefile.PL
 lib/Dpchrist/CGI.pm
 t/Dpchrist-CGI.t
+t/_calc_checksum.t
+t/_untaint_checksum.t
+t/_untaint_regexp.t
+t/_validate_checksum.t
+t/_validate_textual.t
 t/calc_checksum.t
 t/dump_cookies.t
 t/dump_params.t
@@ -27,12 +32,11 @@ t/untaint_checkbox.t
 t/untaint_password_field.t
 t/untaint_path.t
 t/untaint_radio_group.t
-t/untaint_regex.t
 t/untaint_textarea.t
 t/untaint_textfield.t
 t/validate_checkbox.t
 t/validate_hidden.t
-t/validate_parameter_present.t
+t/validate_parameter_is_required.t
 t/validate_password_field.t
 t/validate_radio_group.t
 t/validate_textarea.t

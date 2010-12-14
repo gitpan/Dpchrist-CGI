@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: validate_checkbox.t,v 1.1 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: validate_checkbox.t,v 1.3 2010-12-13 06:10:53 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_checkbox().
 #
@@ -11,17 +11,21 @@ use warnings;
 
 use Test::More tests		=> 9;
 
-use Dpchrist::CGI		qw( %CHECKBOX_ARGS
-				    validate_checkbox );
+use Dpchrist::CGI		qw(
+    %CHECKBOX_ARGS
+    dump_params
+    validate_checkbox
+);
 
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
 
-my (@r, $s, $s2);
+my ($r, @e, $s, $s2);
 
 my $good = $CHECKBOX_ARGS{-value} || 'on';
 
@@ -31,113 +35,128 @@ for (my $i = 0; $i < 32; $i++) {
 }
 $bad .= chr(127);
 
-@r = eval {
+$r = eval {
     validate_checkbox;
 };
 ok(								#     1
-    $@ =~ 'ERROR: requires one argument',
+    $@ =~ 'ERROR: requires exactly 2 arguments',
     'call without arguments should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
+$r = eval {
     validate_checkbox undef;
 };
 ok(								#     2
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with undef should throw exception'
+    $@ =~ 'ERROR: requires exactly 2 arguments',
+    'call with one argument should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_checkbox '';
+$r = eval {
+    validate_checkbox undef, undef;
 };
 ok(								#     3
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with empty string should throw exception'
+    $@ =~ 'ERROR: positional argument 0 must be array reference',
+    'call with undef RA_ERRORS argument should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_checkbox bless({}, 'Foo');
+$r = eval {
+    validate_checkbox \@e, undef;
 };
 ok(								#     4
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with object should throw exception'
+    $@ =~ 'ERROR: positional argument 1 must be parameter name',
+    'call with undef NAME argument should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    my $s = join ' ', __FILE__, __LINE__;
-    validate_checkbox $s;
+$r = eval {
+    $s = __FILE__ . __LINE__;
+    validate_checkbox \@e, $s;
 };
-ok (								#     5
+ok(								#     5
     !$@
-    && @r == 0,
-    'call when no CGI parameters should return empty array'
-) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+    && @e == 0
+    && !defined($r),
+    'call on undefined parameter should return undef'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, \@e, $r], [qw(@ *e r)]),
 );
 
-@r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    param(-name => $s, -value => ' ');
-    $s2 = join ' ', __FILE__, __LINE__;
-    validate_checkbox $s2;
+$r = eval {
+    @e = ();
+    $s = __FILE__ . __LINE__;
+    param($s,
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
+    );
+    validate_checkbox \@e, $s;
 };
 ok(								#     6
     !$@
-    && @r == 0,
-    'call for non-existent CGI parameter should return empty list'
+    && !defined($r)
+    && @e == 1
+    && $e[0] =~ /parameter '$s' must have single value/,
+    'call with multivalued parameter should generate error message'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
+    Data::Dumper->Dump([$@, $s, \@e, $r], [qw(@ s *e r)]),
 );
 
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => '');
-    validate_checkbox $s;
+$r = eval {
+    @e = ();
+    $s = __FILE__ . __LINE__;
+    param($s, "BEL\x07");
+    validate_checkbox \@e, $s;
 };
 ok(								#     7
     !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
-    'call for CGI parameter containing empty string ' .
-    'should return error message'
+    && !defined($r)
+    && @e == 1
+    && $e[0] =~ /parameter '$s' must contain valid characters/,
+    'call with parameter value containing control characters ' .
+    'should generate error message'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+    Data::Dumper->Dump([$@, $s, \@e, $r], [qw(@ s *e r)]),
 );
 
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => $bad);
-    validate_checkbox $s;
+$r = eval {
+    @e = ();
+    $s = __FILE__ . __LINE__;
+    param($s, __FILE__ . __LINE__);
+    validate_checkbox \@e, $s;
 };
 ok(								#     8
     !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
-    'call for CGI parameter with bad characters ' .
-    'should return error message'
+    && !defined($r)
+    && @e == 1
+    && $e[0] =~ /parameter '$s' must contain valid value/,
+    'call with invalid parameter value ' .
+    'should generate error message'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $bad, $s, \@r], [qw(@ bad s *r)]),
+    Data::Dumper->Dump([$@, $s, \@e, $r], [qw(@ s *e r)]),
 );
 
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => $good);
-    validate_checkbox $s;
+$r = eval {
+    @e = ();
+    $s = __FILE__ . __LINE__;
+    $CHECKBOX_ARGS{-value} = __FILE__ . __LINE__;
+    param($s, $CHECKBOX_ARGS{-value});
+    validate_checkbox \@e, $s;
 };
 ok(								#     9
     !$@
-    && @r == 0,
-    'call for CGI parameter with good value ' .
-    'should return empty array'
+    && @e == 0
+    && defined($r)
+    && $r eq $CHECKBOX_ARGS{-value},
+    'call with parameter value of $CHECKBOX_ARGS{-VALUE} ' .
+    'should return value'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $good, $s, \@r], [qw(@ good s *r)]),
+    Data::Dumper->Dump([$@, $s, \@e, \%CHECKBOX_ARGS, $r],
+		     [qw(@   s   *e    CHECKBOX_ARGS   r)]),
 );
 

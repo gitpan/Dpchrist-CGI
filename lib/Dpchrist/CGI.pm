@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.50 2010-12-03 05:13:47 dpchrist Exp $
+# $Id: CGI.pm,v 1.58 2010-12-14 06:05:36 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -17,10 +17,12 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	%CHECKBOX_ARGS
+	$CHECKSUM_LENGTH
 	$CHECKSUM_SALT
 	%PASSWORD_FIELD_ARGS
 	$RX_PASSTHROUGH
 	$RX_UNTAINT_CHECKBOX
+	$RX_UNTAINT_CHECKSUM
 	$RX_UNTAINT_PASSWORD_FIELD
 	$RX_UNTAINT_PATH
 	$RX_UNTAINT_RADIO_GROUP
@@ -30,7 +32,6 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	%TEXTAREA_ARGS
 	%TEXTFIELD_ARGS
 	%TH_ATTR
-	calc_checksum
 	dump_cookies
 	dump_params
 	gen_checkbox
@@ -49,23 +50,30 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	untaint_password_field
 	untaint_path
 	untaint_radio_group
-	untaint_regex
 	untaint_textarea
 	untaint_textfield
 	validate_checkbox
 	validate_hidden
-	validate_parameter_present
+	validate_parameter_is_required
 	validate_password_field
 	validate_radio_group
 	validate_textarea
 	validate_textfield
 ) ] );
 
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT_OK = (
+    @{ $EXPORT_TAGS{'all'} },
+    qw(
+	_calc_checksum
+	_untaint_regexp
+	_validate_checksum
+	_validate_textual
+    ),
+);
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.50 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.58 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -88,7 +96,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.50 $.
+This documentation describes module revision $Revision: 1.58 $.
 
 
 This is alpha test level software
@@ -103,13 +111,29 @@ and may change or disappear at any time.
 
 =head3 %CHECKBOX_ARGS
 
-    %CHECKBOX_ARGS = ();
+    %CHECKBOX_ARGS = (
+	-value => 'on',
+    );
 
 Default argments used by gen_checkbox().
 
 =cut
 
-our %CHECKBOX_ARGS = ();
+our %CHECKBOX_ARGS = (
+    -value => 'on',
+);
+
+#----------------------------------------------------------------------
+
+=head3 $CHECKSUM_LENGTH
+
+    $CHECKSUM_LENGTH = 32;
+
+Length of checksum strings.
+
+=cut
+
+our $CHECKSUM_LENGTH = 32;
 
 #----------------------------------------------------------------------
 
@@ -148,7 +172,8 @@ our %PASSWORD_FIELD_ARGS = (
 
     $RX_PASSTHROUGH    => qr/^(.*)$/;
 
-Pass-through regular expression for testing.
+Regular expression for testing untaint_*() subroutines.
+Passes all characters.
 
 =cut
 
@@ -158,13 +183,26 @@ our $RX_PASSTHROUGH    = qr/^(.*)$/;
 
 =head3 $RX_UNTAINT_CHECKBOX
 
-    $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
+    $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
 
-Regular expression used for untainting checkbox parameter values.
+Regular expression for untainting checkbox parameter values.
+Passes printable characters.
 
 =cut
 
-our $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
+our $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_CHECKSUM
+
+    $RX_UNTAINT_CHECKSUM = qr/^[0-9a-f]{32}$/;
+
+Regular expression for untainting checksum parameter values.
+
+=cut
+
+our $RX_UNTAINT_CHECKSUM = qr/^([0-9a-f]{32})$/;
 
 #----------------------------------------------------------------------
 
@@ -173,6 +211,7 @@ our $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
     $RX_UNTAINT_PASSWORD_FIELD = qr/^([\PC]*)$/;
 
 Regular expression used for untainting password field parameter values.
+Passes printable characters.
 
 =cut
 
@@ -185,10 +224,24 @@ our $RX_UNTAINT_PASSWORD_FIELD	= qr/^([\PC]*)$/;
     $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
 
 Regular expression used for untainting paths.
+Passes all characters except NUL.
 
 =cut
 
 our $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_POPUP
+
+    $RX_UNTAINT_POPUP = qr/^([\PC]*)$/;
+
+Regular expression used for untainting popup parameter values.
+Passes printable characters.
+
+=cut
+
+our $RX_UNTAINT_POPUP	= qr/^([\PC]*)$/;
 
 #----------------------------------------------------------------------
 
@@ -197,6 +250,7 @@ our $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
     $RX_UNTAINT_RADIO_GROUP = qr/^([\PC]*)$/;
 
 Regular expression used for untainting radio group parameter values.
+Passes printable characters.
 
 =cut
 
@@ -206,9 +260,10 @@ our $RX_UNTAINT_RADIO_GROUP	= qr/^([\PC]*)$/;
 
 =head3 $RX_UNTAINT_TEXTAREA
     
-    $RX_UNTAINT_TEXTAREA = qr/^([\PC\n\r]*)$/;
+    $RX_UNTAINT_TEXTAREA = qr/^([\PC\r\n]*)$/;
 
 Regular expression used for untainting textarea parameter values.
+Passes printable characters plus carriage return and linefeed.
 
 =cut
 
@@ -221,6 +276,7 @@ our $RX_UNTAINT_TEXTAREA	= qr/^([\PC\n\r]*)$/;
     $RX_UNTAINT_TEXTFIELD = qr/^([\PC]*)$/;
 
 Regular expression used for untainting textfield parameter values.
+Passes printable characters.
 
 =cut
 
@@ -310,37 +366,122 @@ our %TH_ATTR = (
 
 =cut
 
+#######################################################################
+# private subroutines:
 #======================================================================
 
-=head3 calc_checksum
+sub _assert_positional_argument_n_must_be_arrayref
+{
+    # my ($n, $ra_args) = @_;
 
-    my $md5 = calc_checksum(LIST);
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be array reference",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_arrayref $_[1]->[$_[0]];
+    
+    return 1;
+}
 
-    # LIST are items to be fed into the checksum
+#======================================================================
 
-Walks list and expands array references.
-Passes through call to Digest::MD5::md5_hex()
-using $CHECKSUM_SALT and walked list.
+sub _assert_positional_argument_n_must_be_coderef
+{
+    # my ($n, $ra_args) = @_;
 
-LIST items, and referenced array items,
-should be strings,
-otherwise the checksum seems to be different
-for each hit (?).
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be code reference",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_coderef $_[1]->[$_[0]];
+    
+    return 1;
+}
 
-Calls Carp::confess() on error.
+#======================================================================
 
-=cut
+sub _assert_positional_argument_n_must_be_defined
+{
+    # my ($n, $ra_args) = @_;
 
-#----------------------------------------------------------------------
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be defined",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless defined $_[1]->[$_[0]];
+    
+    return 1;
+}
 
-sub calc_checksum
+#======================================================================
+
+sub _assert_positional_argument_n_must_be_parameter_name
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be parameter name",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_nonempty_string $_[1]->[$_[0]];
+}
+
+#======================================================================
+
+sub _assert_positional_argument_n_must_be_wholenumber
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be whole number",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_wholenumber $_[1]->[$_[0]];
+    
+    return 1;
+}
+
+#======================================================================
+
+sub _assert_positional_argument_n_must_be_regexpref
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be",
+	'regular expression reference',
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_regexpref $_[1]->[$_[0]];
+    
+    return 1;
+}
+
+#======================================================================
+
+sub _assert_requires_at_least_n_arguments
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: requires at least $_[0] arguments",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless $_[0] <= scalar @{$_[1]};
+}
+
+#======================================================================
+
+sub _assert_requires_exactly_n_arguments
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: requires exactly $_[0] arguments",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless scalar @{$_[1]} == $_[0];
+}
+
+#======================================================================
+
+sub _calc_checksum
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    confess join(' ',
-	'ERROR: requires at least one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_;
+    _assert_requires_at_least_n_arguments(1, \@_);
 
     my @args = ($CHECKSUM_SALT);
     foreach (@_) {
@@ -359,6 +500,232 @@ sub calc_checksum
     return $md5;
 }
 
+#======================================================================
+
+sub _error_parameter_is_required
+{
+    # my ($ra_errors, $name) = @_;
+
+    _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+
+    push @{$_[0]}, (
+	"ERROR: parameter '$_[1]' is required",
+    );
+
+    return 1;
+}
+
+#======================================================================
+
+sub _untaint_checksum
+{
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_CHECKSUM, @_);
+}
+
+#======================================================================
+
+sub _untaint_regexp
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_at_least_n_arguments(1, \@_);
+    _assert_positional_argument_n_must_be_regexpref(0, \@_);
+
+    my ($rx, @values) = @_;
+
+    my @r;
+
+    foreach (@_[1 .. $#_]) {
+	cluck join(' ',
+	    'attempt to apply regular expression',
+	    'to undefined value',
+	) unless defined($_);
+	cluck 'attempt to apply regular expression to reference'
+	    if ref($_);
+	if (defined($_) && !ref($_)) {
+	    $_ =~ $rx;
+	    push @r, $1;
+	}
+	else {
+	    push @r, undef;
+	}
+	last unless wantarray;
+    }
+
+  DONE:
+    ddump('return',
+	wantarray ? ([\@r],   ['*r']  )
+		  : ([$r[0]], ['r[0]'])
+    ) if DEBUG;
+    return (wantarray) ? @r : $r[0];
+}
+
+#======================================================================
+
+sub _validate_checksum
+{
+    _assert_requires_exactly_n_arguments(2, \@_);
+
+    dprint('passing through call to _validate_textual()') if DEBUG;
+    return _validate_textual(
+	@_, \&_untaint_checksum, $CHECKSUM_LENGTH
+    );
+}
+
+#======================================================================
+
+sub _validate_parameter_length_must_be_n_characters_or_less
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $uvalue, $maxlength) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_defined(2, \@_);
+    _assert_positional_argument_n_must_be_wholenumber(3, \@_);
+
+    my $r;
+
+    if ($_[3] < length $_[2]) {
+	push @{$_[0]}, (
+	    "ERROR: parameter '$_[1]' length must be " . 
+	    "$_[3] characters or less",
+	);
+	goto DONE;
+    }
+    $r = 1;
+
+  DONE:
+
+    ddump('return', [\@_, $r], [qw(*_ r)]) if DEBUG;
+    return $r;
+}
+
+#======================================================================
+
+sub _validate_parameter_must_have_single_value
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $ra_values) = @_;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
+    
+    my $r;
+
+    if (1 < scalar @{$_[2]}) {
+	push @{$_[0]}, (
+	    "ERROR: parameter '$_[1]' must have single value",
+	);
+	goto DONE;
+    }
+
+    $r = 1;
+
+  DONE:
+
+    ddump('return', [\@_, $r], [qw(*_ r)]) if DEBUG;
+    return $r;
+}
+
+#======================================================================
+
+sub _validate_parameter_must_contain_valid_characters
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $value, $uvalue) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_defined(2, \@_);
+    ### arg 3 will be undef if failed to untaint
+
+    my ($ra, $rb);
+
+    if (is_arrayref $_[2]) {
+	$ra = $_[2];
+	$rb = $_[3];
+    }
+    else {
+	$ra = [$_[2]];
+	$rb = [$_[3]];
+    }
+    ddump([$ra, $rb], [qw(ra rb)]) if DEBUG;
+
+    my $r = 1;
+
+    if (arrayref_cmp $ra, $rb) {
+	push @{$_[0]}, join(' ',
+    	    "ERROR: parameter '$_[1]' must contain valid characters",
+	);
+	$r = undef;
+    }
+
+  DONE:
+
+    ddump('return', [\@_, $r], [qw(*_ r)]) if DEBUG;
+    return $r;
+}
+
+#======================================================================
+
+sub _validate_textual
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $rc_untaint, $maxlength) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_coderef(2, \@_);
+    _assert_positional_argument_n_must_be_wholenumber(3, \@_);
+
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
+
+    my $r;
+    my $uvalue;
+
+    if (scalar @values) {
+
+        _validate_parameter_must_have_single_value(
+	    @_[0, 1], \@values
+	) or goto DONE;
+
+	$uvalue = $_[2]->($values[0]);
+	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
+
+        _validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], $values[0], $uvalue
+	) or goto DONE;
+
+	_validate_parameter_length_must_be_n_characters_or_less(
+	    @_[0, 1], $uvalue, $_[3]
+	) or goto DONE;
+
+	$r = $uvalue;
+	ddump([$r], [qw(r)]) if DEBUG;
+    }
+
+  DONE:
+
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
+}
+
+#######################################################################
+# public subroutines:
 #======================================================================
 
 =head3 dump_cookies
@@ -449,9 +816,8 @@ Returns an array of HTML elements:
 
 [1]  A hidden control with name given by
 NAME with '_ck' suffix
-and value given by
-calling calc_checksum()
-with $CHECKSUM_SALT and incoming arguments.
+and md5_hex() checksum value given by
+$CHECKSUM_SALT and incoming arguments.
 
 Calls Carp::confess() on error.
 
@@ -499,7 +865,7 @@ sub gen_hidden
 
     push @html, CGI::hidden(@_);
 
-    my $md5 = calc_checksum(@_);
+    my $md5 = _calc_checksum(@_);
     ddump([$md5], [qw(md5)]) if DEBUG;
 
     push @html, CGI::hidden(-name => $name . '_ck', -value => $md5);
@@ -888,9 +1254,8 @@ sub nbsp
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for checkboxs
-('on').
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_CHECKBOX.
 
 =cut
 
@@ -898,10 +1263,29 @@ using a RX suitable for checkboxs
 
 sub untaint_checkbox
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_CHECKBOX, @_);
+}
 
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_CHECKBOX, @_);
+#======================================================================
+
+=head3 untaint_hidden
+
+    my @untainted = untaint_hidden(LIST);
+
+    # LIST are strings to be untainted
+
+Passes through call to _untaint_regexp()
+using $RX_PASSTHROUGH.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub untaint_hidden
+{
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_PASSTHROUGH, @_);
 }
 
 #======================================================================
@@ -912,9 +1296,8 @@ sub untaint_checkbox
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for password fields
-(printable characters).
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_PASSWORD_FIELD.
 
 =cut
 
@@ -922,10 +1305,8 @@ using a RX suitable for password fields
 
 sub untaint_password_field
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
-
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_PASSWORD_FIELD, @_);
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_PASSWORD_FIELD, @_);
 }
 
 #======================================================================
@@ -936,9 +1317,8 @@ sub untaint_password_field
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for Unix paths
-(everying except NULL).
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_PATH.
 
 =cut
 
@@ -946,10 +1326,29 @@ using a RX suitable for Unix paths
 
 sub untaint_path
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_PATH, @_);
+}
 
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_PATH, @_);
+#======================================================================
+
+=head3 untaint_popup
+
+    my @untainted = untaint_popup(LIST);
+
+    # LIST are strings to be untainted
+
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_POPUP.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub untaint_popup
+{
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_POPUP, @_);
 }
 
 #======================================================================
@@ -960,9 +1359,8 @@ sub untaint_path
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for radio groups
-(printable characters).
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_RADIO_GROUP.
 
 =cut
 
@@ -970,80 +1368,8 @@ using a RX suitable for radio groups
 
 sub untaint_radio_group
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
-
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_RADIO_GROUP, @_);
-}
-
-#======================================================================
-
-=head3 untaint_regex
-
-    my @untainted = untaint_regex(RX, LIST);
-
-    # RX is a regular epxression
-
-    # LIST are strings to be untainted
-
-Applies regular expression to each element in LIST.
-If LIST is empty, returns void.
-In list context, process LIST
-and returns list of first captured substrings for each LIST item.
-In scalar context, process first LIST item
-and returns first captured substring.
-
-Caller usually creates RX with
-the quote regular expression operator 'qr()'.
-
-Returns undef for LIST elements that are references.
-
-Calls Carp::confess() on error.
-
-Calls Carp::cluck() if LIST contains undefined values
-or references.
-
-=cut
-
-#----------------------------------------------------------------------
-
-sub untaint_regex
-{
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
-
-    confess join(' ',
-	'ERROR: first argument must be a regular expression',
-	Data::Dumper->Dump([\@_], [qw(*_)]),
-    ) unless @_ && is_rxref($_[0]);
-
-    my $rx = shift;
-
-    if (@_) {
-	my @r;
-	foreach (@_) {
-	    cluck join(' ',
-		'attempt to apply regular expression',
-		'to undefined value',
-	    ) unless defined($_);
-	    cluck 'attempt to apply regular expression to reference'
-		if ref($_);
-	    if (defined($_) && !ref($_)) {
-		$_ =~ $rx;
-		push @r, $1;
-	    }
-	    else {
-		push @r, undef;
-	    }
-	    last unless wantarray;
-	}
-	ddump('return',
-	    wantarray ? ([\@r],   ['*r']  )
-		      : ([$r[0]], ['r[0]'])
-	) if DEBUG;
-	return (wantarray) ? @r : $r[0];
-    }
-    dprint 'returning void' if DEBUG;
-    return;
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_RADIO_GROUP, @_);
 }
 
 #======================================================================
@@ -1054,9 +1380,8 @@ sub untaint_regex
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for text areas
-(printable characters plus carriage return and line feed).
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_TEXTAREA.
 
 =cut
 
@@ -1064,10 +1389,8 @@ using a RX suitable for text areas
 
 sub untaint_textarea
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
-
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_TEXTAREA, @_);
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_TEXTAREA, @_);
 }
 
 #======================================================================
@@ -1078,9 +1401,8 @@ sub untaint_textarea
 
     # LIST are strings to be untainted
 
-Passes through call to untaint_regex()
-using a RX suitable for textfields
-(printable characters).
+Passes through call to _untaint_regexp()
+using $RX_UNTAINT_TEXTFIELD.
 
 =cut
 
@@ -1088,25 +1410,30 @@ using a RX suitable for textfields
 
 sub untaint_textfield
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
-
-    dprint('passing through call to untaint_regex()') if DEBUG;
-    return untaint_regex($RX_UNTAINT_TEXTFIELD, @_);
+    dprint('passing through call to _untaint_regexp()') if DEBUG;
+    return _untaint_regexp($RX_UNTAINT_TEXTFIELD, @_);
 }
 
 #======================================================================
 
 =head3 validate_checkbox
 
-    push @errors, validate_checkbox(NAME);
+    my $v = validate_checkbox(RA_ERRORS, NAME);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter name
 
-If CGI parameter NAME has a defined value,
-verifies that its value matches its untainted value.
-Returns list of error messages, if any.
+Untaints, validates, and returns value of checkbox CGI parameter NAME
+-- must have single value,
+must contain valid characters (calls untaint_checkbox()),
+and must contain valid value (compares to $CHECKBOX_ARGS{-value}).
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
-Returns empty list if no CGI parameters exist (e.g. fresh hit).
+Per CGI.pm, note that return value
+will also be undef when checkbox is unchecked.
 
 Calls Carp::confess() on error.
 
@@ -1118,48 +1445,66 @@ sub validate_checkbox
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
-    confess join(' ',
-	'ERROR: requires one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_ == 1;
+    _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
 
-    confess join(' ',
-	'ERROR: argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
 
-    my @errors;
+    my $uvalue;
+    my $r;
 
-    goto DONE unless param();
+    if (scalar @values) {
 
-    my $name = shift;
-    my $p = param($name);
+	_validate_parameter_must_have_single_value(
+	    @_[0, 1], \@values
+	) or goto DONE;
 
-    if (defined $p) {
-	my $u = untaint_checkbox($p);
-	push @errors, (
-	    "ERROR: parameter '$name' contains invalid characters",
-	) unless defined($u) && $p eq $u;
+	$uvalue = untaint_checkbox($values[0]);
+	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
+
+	_validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], $values[0], $uvalue
+	) or goto DONE;
+
+	ddump([\%CHECKBOX_ARGS], [qw(*CHECKBOX_ARGS)]) if DEBUG;
+
+	unless ($uvalue eq $CHECKBOX_ARGS{-value}) {
+	    push @{$_[0]}, (
+		"ERROR: parameter '$_[1]' must contain valid value",
+	    );
+	    goto DONE;
+	}
+
+	$r = $uvalue;
     }
 
   DONE:
 
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
 }
 
 #======================================================================
 
 =head3 validate_hidden
 
-    push @errors, validate_hidden(NAME);
+    my $v = validate_hidden(RA_ERRORS, NAME);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter name
 
-If CGI parameter NAME has a defined value,
-looks for corresponding checksum CGI parameter
-and verifies checksum.
-Returns list of error messages, if any.
+Untaints, validates, and returns value of hidden CGI parameter NAME
+-- hidden parameter(s) required if any parameters exist,
+checksum parameter is required,
+checksum parameter must validate as textual field,
+hidden parameter(s) must contain valid characters,
+and hidden parameter(s) checksum must match checksum parameter.
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
 Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
@@ -1173,63 +1518,85 @@ sub validate_hidden
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    confess join(' ',
-	'ERROR: requires exactly one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_ == 1;
+    _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
 
-    confess join(' ',
-	'ERROR: argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
-
-    my @errors;
+    my @r;
 
     goto DONE unless param();
 
-    my $name = shift;
-    my @value = param($name);
-    ddump([$name, \@value], [qw(name *value)]) if DEBUG;
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
 
-    unless (@value) {
-	push @errors, "ERROR: parameter '$name' missing";
-	goto DONE;
+    if (scalar @values) {
+
+	my $nx = $_[1] . '_ck';
+	ddump([$nx], [qw(nx)]) if DEBUG;
+
+	validate_parameter_is_required($_[0], $nx)
+	    or do {
+	    push @{$_[0]}, "ERROR: parameter '$_[1]' checksum missing";
+	    goto DONE;
+	};
+
+	my $ck = _validate_checksum($_[0], $nx)
+	    or do {
+	    push @{$_[0]}, "ERROR: parameter '$_[1]' checksum bad";
+	    goto DONE;
+	};
+	ddump([$ck], [qw(ck)]) if DEBUG;
+
+	my @uvalues = untaint_hidden(@values);
+	ddump([\@uvalues], [qw(*uvalues)]) if DEBUG;
+
+	_validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], \@values, \@uvalues
+	) or goto DONE;
+
+	my $md5 = _calc_checksum(-name => $_[1], -value => \@uvalues);
+    	ddump([$md5], [qw(md5)]) if DEBUG;
+
+	unless ($ck eq $md5) {
+	    push @{$_[0]}, (
+		"ERROR: parameter '$_[1]' checksum bad"
+	    );
+	    goto DONE;
+	}
+
+	@r = @uvalues;
     }
-
-    my $ck = param($name . '_ck');
-    ddump([$ck], [qw(ck)]) if DEBUG;
-
-    unless ($ck) {
-	push @errors, (
-	    "ERROR: parameter '$name' checksum missing",
-	);
-	goto DONE;
+    else {
+	_error_parameter_is_required @_[0, 1];
     }
-
-    my $md5 = calc_checksum(-name => $name, -value => \@value);
-    ddump([$md5], [qw(md5)]) if DEBUG;
-
-    push @errors, (
-	"ERROR: parameter '$name' checksum bad"
-    ) unless $ck eq $md5;
 
   DONE:
 
-    ddump('return', [\@errors], [qw(*errors)]) if DEBUG;
-    return @errors;
+    if (wantarray) {
+	ddump('return', [$_[0], \@r], [qw(_[0] *r)]) if DEBUG;
+	return @r;
+    }
+    else {
+	ddump('return', [$_[0], $r[0]], [qw(_[0] r)]) if DEBUG;
+	return $r[0];
+    }
 }
 
 #======================================================================
 
-=head3 validate_parameter_present
+=head3 validate_parameter_is_required
 
-    push @errors, validate_required_parameters(LIST);
+    my $ok = validate_parameter_is_required(RA_ERRORS, LIST);
+
+    # RA_ERRORS is reference to array of error messages
 
     # LIST are CGI parameter names
 
-Verifies that CGI parameters named in LIST
-have defined values.
-Returns list of error messages, if any.
+Verifies that CGI parameters named in LIST exist,
+including the undefined value.
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
 Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
@@ -1239,51 +1606,55 @@ Calls Carp::confess() on error.
 
 #----------------------------------------------------------------------
 
-sub validate_parameter_present
+sub validate_parameter_is_required
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
-    confess join(' ',
-	'ERROR: requires at least one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_;
+    _assert_requires_at_least_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    for (my $i = 1; $i < scalar @_; $i++) {
+	_assert_positional_argument_n_must_be_parameter_name($i, \@_);
+    }
 
-    confess join(' ',
-	'ERROR: arguments must be CGI parameter names',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) if grep {!is_nonempty_string $_} @_;
-
-    my @errors;
+    my $r = 1;
 
     goto DONE unless param();
 
-    foreach (@_) {
-	my $v = param($_);
-	push @errors, join('',
-	    "ERROR: parameter '$_' missing",
-	) unless is_nonempty_string $v;
+    foreach (@_[1 .. $#_]) {
+	my @v = param($_);
+	unless (0 < scalar @v) {
+	    push @{$_[0]}, join('',
+		"ERROR: parameter '$_' is required",
+	    );
+	    $r = undef;
+	}
     }
 
   DONE:
 
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
 }
 
 #======================================================================
 
 =head3 validate_password_field
 
-    push @errors, validate_password_field(NAME);
+    my $v = validate_password_field(RA_ERRORS, NAME);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter name
 
-If CGI parameter NAME has a defined value,
-verifies that length does not exceed $PASSWORD_FIELD_ARGS{-maxlength}
-and that value matches its untainted value.
-Returns list of error messages, if any.
-
-Returns empty list if no CGI parameters exist (e.g. fresh hit).
+Untaints, validates, and returns value of password field
+CGI parameter NAME
+-- must have single value,
+must contain valid characters (calls untaint_password_field()),
+and length must be n characters or less
+(compares to $PASSWORD_FIELD_ARGS{-maxlength}).
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
 Calls Carp::confess() on error.
 
@@ -1293,58 +1664,36 @@ Calls Carp::confess() on error.
 
 sub validate_password_field
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+    _assert_requires_exactly_n_arguments(2, \@_);
 
-    confess join(' ',
-	'ERROR: requires one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_ == 1;
-
-    confess join(' ',
-	'ERROR: argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
-
-    my @errors;
-
-    goto DONE unless param();
-
-    my $name = shift;
-    my $p = param($name);
-
-    if (defined $p) {
-	push @errors, (
-	    "ERROR: parameter '$name' is too long",
-	) if $PASSWORD_FIELD_ARGS{-maxlength} < length $p;
-
-	my $u = untaint_password_field($p);
-	push @errors, (
-	    "ERROR: parameter '$name' contains invalid characters",
-	) unless defined($u) && $p eq $u;
-    }
-
-  DONE:
-
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    dprint('passing through call to _validate_textual()') if DEBUG;
+    return _validate_textual(
+	@_, \&untaint_password_field, $PASSWORD_FIELD_ARGS{-maxlength}
+    );
 }
 
 #======================================================================
 
 =head3 validate_radio_group
 
-    push @errors, validate_radio_group(NAME, VALUES);
+    my $v = validate_radio_group(RA_ERRORS, NAME, RA_VALUES);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter nameo
 
-    # VALUES is list (or arrayref) of allowed values
+    # RA_VALUES is reference to array of allowed values
 
-If CGI parameter NAME has a defined value,
-verifies that value matches untainted value
-and that value is one of listed VALUES.
-Returns list of error messages, if any.
+Untaints, validates, and returns radio group CGI parameter NAME --
+is required,
+must have single value,
+must contain valid characters (calls untaint_radio_group()),
+and must contain valid value (be in @RA_VALUES).
+If any problems are found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
-Returns empty list if no CGI parameters exist (e.g. fresh hit).
+Returns undef if no CGI parameters exist (e.g. fresh hit).
 
 Calls Carp::confess() on error.
 
@@ -1356,63 +1705,70 @@ sub validate_radio_group
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
-    confess join(' ',
-	'ERROR: requires at least three arguments',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless 1 < @_ && ref($_[1]) eq 'ARRAY' && 1 < @{$_[1]}
-	  || 2 < @_;
+    _assert_requires_exactly_n_arguments(3, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
 
-    confess join(' ',
-	'ERROR: first argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
+    my $r;
 
-    my @errors;
+    goto DONE unless param;
 
-    goto DONE unless param();
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
 
-    my $name = shift;
-    my @values = ref($_[0]) ? @{$_[0]} : @_;
-    my $p = param($name);
+    my $uvalue;
 
-    if (defined $p) {
-	my $u = untaint_radio_group($p);
+    if (scalar @values) {
 
-	unless (defined($u) && $p eq $u) {
-	    push @errors, join(' ',
-		"ERROR: parameter '$name' contains invalid characters"
+        _validate_parameter_must_have_single_value(
+	    @_[0, 1], \@values 
+	) or goto DONE;
+
+        $uvalue = untaint_radio_group($values[0]);
+	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
+
+        _validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], $values[0], $uvalue
+	) or goto DONE; 
+
+	unless (grep {$uvalue eq $_} @{$_[2]}) {
+	    push @{$_[0]}, join(' ',
+		"ERROR: parameter '$_[1]' must contain valid value",
 	    );
 	    goto DONE;
 	}
 
-	push @errors, join(' ',
-	    "ERROR: parameter '$name' contains invalid value",
-	) unless grep {defined($u) && $_ eq $u} @values;
+	$r = $uvalue;
     }
     else {
-	push @errors, "ERROR: parameter '$name' missing";
+	_error_parameter_is_required @_[0, 1];
     }
 
   DONE:
 
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
 }
 
 #======================================================================
 
 =head3 validate_textarea
 
-    push @error, validate_textarea(NAME);
+    my $v = validate_textarea(RA_ERRORS, NAME);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter name
 
-If CGI parameter NAME has a defined value,
-verifies that length does not exceed $TEXTAREA_ARGS{-maxlength}
-and that value matches its untainted value.
-Returns list of error messages, if any.
-
-Returns empty list if no CGI parameters exist (e.g. fresh hit).
+Untaints, validates, and returns value of textarea CGI parameter NAME
+-- must have single value,
+must contain valid characters (calls untaint_textarea()),
+and length must be n characters or less
+(compares to $TEXTAREA_ARGS{-maxlength}).
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
 Calls Carp::confess() on error.
 
@@ -1422,56 +1778,32 @@ Calls Carp::confess() on error.
 
 sub validate_textarea
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+    _assert_requires_exactly_n_arguments(2, \@_);
 
-    confess join(' ',
-	'ERROR: requires one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_ == 1;
-
-    confess join(' ',
-	'ERROR: argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
-
-    my @errors;
-
-    goto DONE unless param();
-
-    my $name = shift;
-    my $p = param($name);
-
-    if (defined $p) {
-	push @errors, (
-	    "ERROR: parameter '$name' is too long",
-	) if $TEXTAREA_ARGS{-maxlength} < length $p;
-
-	my $u = untaint_textarea($p);
-	push @errors, (
-	    "ERROR: parameter '$name' contains invalid characters",
-	) unless defined($u) && $p eq $u;
-    }
-
-  DONE:
-
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    dprint('passing through call to _validate_textual()') if DEBUG;
+    return _validate_textual(
+	@_, \&untaint_textarea, $TEXTAREA_ARGS{-maxlength}
+    );
 }
 
 #======================================================================
 
 =head3 validate_textfield
 
-    push @errors, validate_textfield(NAME);
+    my $v = validate_textfield(RA_ERRORS, NAME);
+
+    # RA_ERRORS is reference to array of error messages
 
     # NAME is a CGI parameter name
 
-If CGI parameter NAME has a defined value,
-verifies that length does not exceed $TEXTFIELD_ARGS{-maxlength}
-and that value matches its untainted value.
-Returns list of error messages, if any.
-
-Returns empty list if no CGI parameters exist (e.g. fresh hit).
+Untaints, validates, and returns value of textfield CGI parameter NAME
+-- must have single value,
+must contain valid characters (calls untaint_textfield()),
+and length must be n characters or less
+(compares to $TEXTFIELD_ARGS{-maxlength}).
+If any problems found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
 
 Calls Carp::confess() on error.
 
@@ -1481,40 +1813,12 @@ Calls Carp::confess() on error.
 
 sub validate_textfield
 {
-    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+    _assert_requires_exactly_n_arguments(2, \@_);
 
-    confess join(' ',
-	'ERROR: requires one argument',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless @_ == 1;
-
-    confess join(' ',
-	'ERROR: argument must be a CGI parameter name',
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_nonempty_string $_[0];
-
-    my @errors;
-
-    goto DONE unless param();
-
-    my $name = shift;
-    my $p = param($name);
-
-    if (defined $p) {
-	push @errors, (
-	    "ERROR: parameter '$name' is too long",
-	) if $TEXTFIELD_ARGS{-maxlength} < length $p;
-
-	my $u = untaint_textfield($p);
-	push @errors, (
-	    "ERROR: parameter '$name' contains invalid characters",
-	) unless defined($u) && $p eq $u;
-    }
-
-  DONE:
-
-    ddump('return', [\@errors], [qw(errors)]) if DEBUG;
-    return @errors;
+    dprint('passing through call to _validate_textual()') if DEBUG;
+    return _validate_textual(
+	@_, \&untaint_textfield, $TEXTFIELD_ARGS{-maxlength}
+    );
 }
 
 #######################################################################

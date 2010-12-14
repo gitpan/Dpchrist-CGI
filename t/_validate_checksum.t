@@ -1,14 +1,15 @@
-# $Id: validate_password_field.t,v 1.5 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: _validate_checksum.t,v 1.1 2010-12-14 05:53:12 dpchrist Exp $
 
-use Test::More tests		=> 6;
+use Test::More tests		=> 7;
 
 use strict;
 use warnings;
 
 use Dpchrist::CGI		qw(
-    %PASSWORD_FIELD_ARGS
-    $RX_UNTAINT_PASSWORD_FIELD
-    validate_password_field
+    $CHECKSUM_LENGTH
+    $RX_UNTAINT_CHECKSUM
+    _calc_checksum
+    _validate_checksum
     dump_params
 );
 
@@ -27,9 +28,10 @@ my $m;
 
 my $r;
 my $s;
+my $t;
 
 $r = eval {
-    validate_password_field;
+    _validate_checksum;
 };
 ok(								#     1
     $@ =~ 'ERROR: requires exactly 2 arguments',
@@ -39,7 +41,7 @@ ok(								#     1
 );
 
 $r = eval {
-    validate_password_field undef, $n;
+    _validate_checksum undef, $n;
 };
 ok(								#     2
     $@ =~ 'ERROR: positional argument 0 must be array reference',
@@ -49,7 +51,7 @@ ok(								#     2
 );
 
 $r = eval {
-    validate_password_field \@e, undef;
+    _validate_checksum \@e, undef;
 };
 ok(								#     3
     $@ =~ 'ERROR: positional argument 1 must be parameter name',
@@ -59,11 +61,23 @@ ok(								#     3
 );
 
 $r = eval {
-    $s = __FILE__ . __LINE__;
-    param($n, $s);
-    validate_password_field \@e, $n;
+    _validate_checksum \@e, $n;
 };
 ok(								#     4
+    !$@
+    && @e == 0
+    && !defined($r),
+    'call when no parameters should return undef'
+) or confess join(' ',
+    Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
+);
+
+$r = eval {
+    $s = _calc_checksum(__FILE__, __LINE__);
+    param($n, $s);
+    _validate_checksum \@e, $n;
+};
+ok(								#     5
     !$@
     && @e == 0
     && defined($r)
@@ -71,16 +85,15 @@ ok(								#     4
     'call with valid parameter should return value'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
+    dump_params,
 );
 
 $r = eval {
-    $rx = $RX_UNTAINT_PASSWORD_FIELD;
-    $RX_UNTAINT_PASSWORD_FIELD = qr/()/;
-    $s = __FILE__ . __LINE__;
-    param($n, $s);
-    validate_password_field \@e, $n;
+    $rx = $RX_UNTAINT_CHECKSUM;
+    $RX_UNTAINT_CHECKSUM = qr/()/;
+    _validate_checksum \@e, $n;
 };
-ok(								#     5
+ok(								#     6
     !$@
     && !defined($r)
     && @e == 1
@@ -88,17 +101,16 @@ ok(								#     5
     'call with broken untaint regexp should generate error message'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
+    dump_params,
 );
 
 $r = eval {
     @e = ();
-    $RX_UNTAINT_PASSWORD_FIELD = $rx;
-    $PASSWORD_FIELD_ARGS{-maxlength} = 1;
-    $s = __LINE__;
-    param($n, $s);
-    validate_password_field \@e, $n;
+    $RX_UNTAINT_CHECKSUM = $rx;
+    $CHECKSUM_LENGTH = 1;
+    _validate_checksum \@e, $n;
 };
-ok(								#     6
+ok(								#     7
     !$@
     && !defined($r)
     && @e == 1
@@ -106,5 +118,6 @@ ok(								#     6
     'call with short maxlength should generate error message'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
+    dump_params,
 );
 

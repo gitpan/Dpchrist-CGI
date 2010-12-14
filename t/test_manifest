@@ -1,12 +1,14 @@
 test-compile-all_pm_files_ok.t
 Dpchrist-CGI.t
-calc_checksum.t
+_calc_checksum.t
+_untaint_regexp.t
+_validate_checksum.t
+_validate_textual.t
 get_cookies_as_rhh.t
 get_params_as_rha.t
 merge_args.t
 merge_attr.t
 nbsp.t
-untaint_regex.t
 dump_cookies.t
 dump_params.t
 gen_checkbox.t
@@ -22,9 +24,9 @@ untaint_path.t
 untaint_radio_group.t
 untaint_textarea.t
 untaint_textfield.t
+validate_parameter_is_required.t
 validate_checkbox.t
 validate_hidden.t
-validate_parameter_present.t
 validate_password_field.t
 validate_radio_group.t
 validate_textarea.t

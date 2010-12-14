@@ -1,7 +1,7 @@
 #######################################################################
-# $Id: untaint_checkbox.t,v 1.2 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: _untaint_checksum.t,v 1.1 2010-12-14 05:56:13 dpchrist Exp $
 #
-# Test script for Dpchrist::CGI::untaint_checkbox().
+# Test script for Dpchrist::CGI::_untaint_checksum().
 #
 # Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
@@ -11,7 +11,7 @@ use warnings;
 
 use Test::More tests			=> 6;
 
-use Dpchrist::CGI			qw( untaint_checkbox );
+use Dpchrist::CGI			qw( _untaint_checksum );
 
 use Capture::Tiny			qw ( capture );
 use Carp;
@@ -20,20 +20,21 @@ use Data::Dumper;
 $|					= 1;
 $Data::Dumper::Sortkeys			= 1;
 
-my ($r, @r, $s);
+my $r;
+my @r;
+my $s;
 my ($stdout, $stderr);
 
-my $good = 'on';
+my $good = _calc_checksum(__FILE__, __LINE__);
 
 my $bad;
 for (my $i = 0; $i < 32; $i++) {
     $bad .= chr($i);
 }
-$bad .= chr(127);
 
 
 $r = eval {
-    untaint_checkbox;
+    _untaint_checksum;
 };
 ok(								#     1
     !$@
@@ -45,7 +46,7 @@ ok(								#     1
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_checkbox undef;
+	_untaint_checksum undef;
     };
 };
 ok(								#     2
@@ -59,7 +60,7 @@ ok(								#     2
 );
 
 $r = eval {
-    untaint_checkbox '';
+    _untaint_checksum '';
 };
 ok(								#     3
     !$@
@@ -71,7 +72,7 @@ ok(								#     3
 );
 
 $r = eval {
-    untaint_checkbox $bad;
+    _untaint_checksum $bad;
 };
 ok(								#     4
     !$@
@@ -82,7 +83,7 @@ ok(								#     4
 );
 
 $r = eval {
-    untaint_checkbox $good . $bad;
+    _untaint_checksum $good . $bad;
 };
 ok(								#     5
     !$@
@@ -94,7 +95,7 @@ ok(								#     5
 );
 
 $r = eval {
-    untaint_checkbox $good;
+    _untaint_checksum $good;
 };
 ok(								#     6
     !$@

@@ -1,17 +1,16 @@
-#######################################################################
-# $Id: validate_textarea.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
-#
-# Test script for Dpchrist::CGI::validate_textarea().
-#
-# Copyright (c) 2010 by David Paul Christensen dpchrist@holgerdanske.com
-#######################################################################
+# $Id: validate_textarea.t,v 1.5 2010-12-13 06:10:53 dpchrist Exp $
+
+use Test::More tests		=> 6;
 
 use strict;
 use warnings;
 
-use Test::More tests		=> 10;
-
-use Dpchrist::CGI		qw( %TEXTAREA_ARGS validate_textarea );
+use Dpchrist::CGI		qw(
+    %TEXTAREA_ARGS
+    $RX_UNTAINT_TEXTAREA
+    validate_textarea
+    dump_params
+);
 
 use Carp;
 use CGI				qw( :standard );
@@ -19,145 +18,93 @@ use Data::Dumper;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
-$TEXTAREA_ARGS{-maxlength}	= 400;
 
-my (@r, $s, $s2);
 
-my $bad;
+my @e;
+my $n = __FILE__ . __LINE__;
+my $rx;
+my $m;
 
-for (my $i = 0; $i < 32; $i++) {
-    next if $i eq 10;
-    next if $i eq 13;
-    $bad .= chr($i);
-}
-$bad .= chr(127);
+my $r;
+my $s;
 
-@r = eval {
-    validate_textarea();
+$r = eval {
+    validate_textarea;
 };
 ok(								#     1
-    $@ =~ 'ERROR: requires one argument',
+    $@ =~ 'ERROR: requires exactly 2 arguments',
     'call without arguments should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_textarea undef;
+$r = eval {
+    validate_textarea undef, $n;
 };
 ok(								#     2
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with undef should throw exception'
+    $@ =~ 'ERROR: positional argument 0 must be array reference',
+    'call with bad RA_ERRORS should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_textarea '';
+$r = eval {
+    validate_textarea \@e, undef;
 };
 ok(								#     3
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with empty string should throw exception'
+    $@ =~ 'ERROR: positional argument 1 must be parameter name',
+    'call with bad NAME should throw exception'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_textarea bless({}, 'Foo');
+$r = eval {
+    $s = __FILE__ . __LINE__;
+    param($n, $s);
+    validate_textarea \@e, $n;
 };
 ok(								#     4
-    $@ =~ 'ERROR: argument must be a CGI parameter name',
-    'call with object should throw exception'
+    !$@
+    && @e == 0
+    && defined($r)
+    && $r eq $s,
+    'call with valid parameter should return value'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
 );
 
-@r = eval {
-    validate_textarea 'foo';
+$r = eval {
+    $rx = $RX_UNTAINT_TEXTAREA;
+    $RX_UNTAINT_TEXTAREA = qr/()/;
+    $s = __FILE__ . __LINE__;
+    param($n, $s);
+    validate_textarea \@e, $n;
 };
 ok(								#     5
     !$@
-    && @r == 0,
-    'call when no CGI parameters should return empty list'
+    && !defined($r)
+    && @e == 1
+    && $e[0] =~ /parameter '$n' must contain valid characters/,
+    'call with broken untaint regexp should generate error message'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
 );
 
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => '');
-    $s2 = join(' ', __FILE__, __LINE__);
-    validate_textarea $s2;
+$r = eval {
+    @e = ();
+    $RX_UNTAINT_TEXTAREA = $rx;
+    $TEXTAREA_ARGS{-maxlength} = 1;
+    $s = __LINE__;
+    param($n, $s);
+    validate_textarea \@e, $n;
 };
 ok(								#     6
     !$@
-    && @r == 0,
-    'call for missing CGI parameter ' .
-    'should return empty list'
+    && !defined($r)
+    && @e == 1
+    && $e[0] =~ /parameter '$n' length must be 1 characters or less/,
+    'call with short maxlength should generate error message'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => '');
-    validate_textarea $s;
-};
-ok(								#     7
-    !$@
-    && @r == 0,
-    'call for CGI parameter containing empty string ' .
-    'should return empty list'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    $s2 = '123456789 ' x (1 + $TEXTAREA_ARGS{-maxlength}/10);
-    param(-name => $s, -value => $s2);
-    validate_textarea $s;
-};
-ok(								#     8
-    !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' is too long/,
-    'call for CGI parameter with too long value ' .
-    'should return error message'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    param(-name => $s, -value => $bad);
-    validate_textarea $s;
-};
-ok(								#     9
-    !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' contains invalid characters/,
-    'call for CGI parameter with bad characters ' .
-    'should return error message'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $bad, $s, \@r], [qw(@ bad s *r)]),
-);
-
-@r = eval {
-    $s = join(' ', __FILE__, __LINE__);
-    $s2 = join("\n",
-	__FILE__ . __LINE__,
-	__FILE__ . __LINE__,
-	__FILE__ . __LINE__,
-    );
-    param(-name => $s, -value => $s2);
-    validate_textarea $s;
-};
-ok(								#    10
-    !$@
-    && @r == 0,
-    'call for with good CGI parameter should return empty array'
-) or confess join(' ',
-    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),
 );
 

@@ -1,7 +1,7 @@
 #######################################################################
-# $Id: untaint_regex.t,v 1.8 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: _untaint_regexp.t,v 1.9 2010-12-14 05:53:12 dpchrist Exp $
 #
-# Test script for Dpchrist::CGI::untaint_regex().
+# Test script for Dpchrist::CGI::_untaint_regexp().
 #
 # Copyright (c) 2010 by David Christensen dpchrist@holgerdanske.com
 #######################################################################
@@ -11,7 +11,7 @@ use warnings;
 
 use Test::More tests => 12;
 
-use Dpchrist::CGI		qw( untaint_regex $RX_PASSTHROUGH );
+use Dpchrist::CGI		qw( _untaint_regexp $RX_PASSTHROUGH );
 
 use Capture::Tiny		qw( capture );
 use Carp;
@@ -32,7 +32,7 @@ my $o  = bless {}, __FILE__ . __LINE__;
 my $o2 = bless {}, __FILE__ . __LINE__;
 
 $r = eval {
-    untaint_regex;
+    _untaint_regexp;
 };
 ok(								#     1
     $@,
@@ -42,7 +42,7 @@ ok(								#     1
 );
 
 $r = eval {
-    untaint_regex 1;
+    _untaint_regexp 1;
 };
 ok(								#     2
     $@,
@@ -52,7 +52,7 @@ ok(								#     2
 );
 
 $r = eval {
-    untaint_regex $RX_PASSTHROUGH;
+    _untaint_regexp $RX_PASSTHROUGH;
 };
 ok(								#     3
     !$@
@@ -64,7 +64,7 @@ ok(								#     3
 );
 
 @r = eval {
-    untaint_regex $RX_PASSTHROUGH;
+    _untaint_regexp $RX_PASSTHROUGH;
 };
 ok(								#     4
     !$@
@@ -77,7 +77,7 @@ ok(								#     4
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_regex $RX_PASSTHROUGH, undef, undef;
+	_untaint_regexp $RX_PASSTHROUGH, undef, undef;
     };
 };
 ok(								#     5
@@ -93,7 +93,7 @@ ok(								#     5
 
 ($stdout, $stderr) = capture {
     @r = eval {
-	untaint_regex $RX_PASSTHROUGH, undef, undef;
+	_untaint_regexp $RX_PASSTHROUGH, undef, undef;
     };
 };
 ok(								#     6
@@ -110,7 +110,7 @@ ok(								#     6
 );
 
 $r = eval {
-    untaint_regex $RX_PASSTHROUGH, '', '';
+    _untaint_regexp $RX_PASSTHROUGH, '', '';
 };
 ok(								#     7
     !$@
@@ -122,7 +122,7 @@ ok(								#     7
 );
 
 @r = eval {
-    untaint_regex $RX_PASSTHROUGH, '', '';
+    _untaint_regexp $RX_PASSTHROUGH, '', '';
 };
 ok(								#     8
     !$@
@@ -136,7 +136,7 @@ ok(								#     8
 );
 
 $r = eval {
-    untaint_regex $RX_PASSTHROUGH, @a;
+    _untaint_regexp $RX_PASSTHROUGH, @a;
 };
 ok(								#     9
     !$@
@@ -149,7 +149,7 @@ ok(								#     9
 );
 
 @r = eval {
-    untaint_regex $RX_PASSTHROUGH, @a;
+    _untaint_regexp $RX_PASSTHROUGH, @a;
 };
 ok(								#    10
     !$@
@@ -163,7 +163,7 @@ ok(								#    10
 
 ($stdout, $stderr) = capture {
     $r = eval {
-	untaint_regex $RX_PASSTHROUGH, $o, $o2;
+	_untaint_regexp $RX_PASSTHROUGH, $o, $o2;
     };
 };
 ok(								#    11
@@ -179,7 +179,7 @@ ok(								#    11
 
 ($stdout, $stderr) = capture {
     @r = eval {
-	untaint_regex $RX_PASSTHROUGH, $o, $o2;
+	_untaint_regexp $RX_PASSTHROUGH, $o, $o2;
     };
 };
 ok(								#    12

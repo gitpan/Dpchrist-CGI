@@ -1,13 +1,13 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: validate_hidden.t,v 1.3 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: validate_hidden.t,v 1.4 2010-12-14 05:53:13 dpchrist Exp $
 #
 # Test script for validate_hidden().
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use strict;
 use warnings;
@@ -15,101 +15,128 @@ use warnings;
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI		qw( calc_checksum validate_hidden );
+use Dpchrist::CGI		qw(
+    _calc_checksum
+    dump_params
+    validate_hidden
+);
 
-local $| 			= 1;
-local $Data::Dumper::Sortkeys 	= 1;
+$| 				= 1;
+$Data::Dumper::Sortkeys 	= 1;
 
-my (@r, $s, $s2, @a, @a2, $md5, $t, $t2);
+my ($r, @r);
+my @e;
+my $n   = __FILE__ . __LINE__;
+my $nx  = $n . '_ck';
+my $v   = __FILE__ . __LINE__;
+my @a   = (-name => $n, -value => $v);
+my $md5 = _calc_checksum(@a);
 
-@r = eval {
-    validate_hidden();
+$r = eval {
+    validate_hidden;
 };
 ok (								#     1
-    $@ =~ /ERROR: requires exactly one argument/,
+    $@ =~ /ERROR: requires exactly 2 arguments/,
     'call with no arguments should throw exception'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    validate_hidden undef;
+$r = eval {
+    validate_hidden undef, $n;
 };
 ok (								#     2
-    $@ =~ /ERROR: argument must be a CGI parameter name/,
+    $@ =~ /ERROR: positional argument 0 must be array reference/,
     'call with undefined value should throw exception'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, \@r], [qw(@ *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    my $s = join ' ', __FILE__, __LINE__;
-    validate_hidden $s;
+$r = eval {
+    validate_hidden \@e, undef;
 };
 ok (								#     3
-    !$@
-    && @r == 0,
-    'call with no CGI parameters should return empty string'
+    $@ =~ /ERROR: positional argument 1 must be parameter name/,
+    'call with undefined value should throw exception'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, \@r], [qw(@ s *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
-@r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    param(-name => $s, -value => '');
-    $s2 = join ' ', __FILE__, __LINE__;
-    validate_hidden $s2;
+$r = eval {
+    validate_hidden \@e, $n;
 };
 ok (								#     4
     !$@
-    && @r == 1
-    &&$r[0] =~ /ERROR: parameter '$s2' missing/,
-    'call on unknown CGI parameter should return error message'
+    && @e == 0
+    && !defined($r),
+    'call when no parameters in scalar context should return undef'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, $s2, \@r], [qw(@ s s2 *r)]),
+    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
 @r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    $s2 = join ' ', __FILE__, __LINE__;
-    @a = (-name => $s, -value => $s2);
-    param(@a);
-    validate_hidden $s;
+    validate_hidden \@e, $n;
 };
 ok (								#     5
     !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' checksum missing/,
-    'call with missing checksum parameter should return error message'
+    && @e == 0
+    && @r == 0,
+    'call when no parameters in list context should return emtpy array'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, $s2, \@a, \@r], [qw(@ s s2 a *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $v, $nx, $md5],
+		     [qw(@   r   *e   n   v   nx   md5)]),
+    dump_params,
 );
 
-@r = eval {
-    param(-name => $s . '_ck', -value => __FILE__ . __LINE__);
-    validate_hidden $s;
+$r = eval {
+    param($n, $v);
+    validate_hidden \@e, $n;
 };
 ok (								#     6
     !$@
-    && @r == 1
-    && $r[0] =~ /ERROR: parameter '$s' checksum bad/,
-    'call with bad checksum parameter should return error message'
+    && !defined($r)
+    && @e == 2
+    && $e[0] =~ /parameter '$nx' is required/
+    && $e[1] =~ /parameter '$n' checksum missing/,
+    'call with missing checksum should generate error message'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, $s2, \@a, \@r], [qw(@ s s2 a *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $v],
+		     [qw(@   r   *e   n   v)]),
+    dump_params,
 );
 
-@r = eval {
-    $md5 = calc_checksum(@a);
-    param(-name => $s . '_ck', -value => $md5);
-    validate_hidden $s;
+$r = eval {
+    @e = ();
+    param($nx, __FILE__ . __LINE__);
+    validate_hidden \@e, $n;
 };
 ok (								#     7
     !$@
-    && @r == 0,
-    'call with argument and matching parameters ' .
-    'should return void'
+    && !defined($r)
+    && @e == 2
+    && $e[0] =~ /parameter '$nx' must contain valid characters/
+    && $e[1] =~ /parameter '$n' checksum bad/,
+    'call with bad checksum should generate error message'
 ) or confess join(' ', __FILE__, __LINE__,
-    Data::Dumper->Dump([$@, $s, $s2, \@a, $md5, \@r],
-		     [qw(@   s   s2    a   md5   *r)]),
+    Data::Dumper->Dump([$@, $r, \@e, $n, $v, $nx, $md5],
+		     [qw(@   r   *e   n   v   nx   md5)]),
+    dump_params,
+);
+
+$r = eval {
+    @e = ();
+    param($nx, $md5);
+    validate_hidden \@e, $n;
+};
+ok (								#     8
+    !$@
+    && @e == 0
+    && defined($r)
+    && $r eq $v,
+    'call with valid parameter should return value'
+) or confess join(' ', __FILE__, __LINE__,
+    Data::Dumper->Dump([$@, $r, \@e, $n, $v, $nx, $md5],
+		     [qw(@   r   *e   n   v   nx   md5)]),
+    dump_params,
 );
 

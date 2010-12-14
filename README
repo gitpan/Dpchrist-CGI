@@ -2,16 +2,23 @@ NAME
     Dpchrist::CGI - utility subroutines for CGI scripts
 
 DESCRIPTION
-    This documentation describes module revision $Revision: 1.50 $.
+    This documentation describes module revision $Revision: 1.58 $.
 
     This is alpha test level software and may change or disappear at any
     time.
 
   GLOBALS
    %CHECKBOX_ARGS
-        %CHECKBOX_ARGS = ();
+        %CHECKBOX_ARGS = (
+            -value => 'on',
+        );
 
     Default argments used by gen_checkbox().
+
+   $CHECKSUM_LENGTH
+        $CHECKSUM_LENGTH = 32;
+
+    Length of checksum strings.
 
    $CHECKSUM_SALT
         $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
@@ -30,37 +37,55 @@ DESCRIPTION
    $RX_PASSTHROUGH
         $RX_PASSTHROUGH    => qr/^(.*)$/;
 
-    Pass-through regular expression for testing.
+    Regular expression for testing untaint_*() subroutines. Passes all
+    characters.
 
    $RX_UNTAINT_CHECKBOX
-        $RX_UNTAINT_CHECKBOX = qr/^(on)$/;
+        $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
 
-    Regular expression used for untainting checkbox parameter values.
+    Regular expression for untainting checkbox parameter values. Passes
+    printable characters.
+
+   $RX_UNTAINT_CHECKSUM
+        $RX_UNTAINT_CHECKSUM = qr/^[0-9a-f]{32}$/;
+
+    Regular expression for untainting checksum parameter values.
 
    $RX_UNTAINT_PASSWORD_FIELD
         $RX_UNTAINT_PASSWORD_FIELD = qr/^([\PC]*)$/;
 
     Regular expression used for untainting password field parameter values.
+    Passes printable characters.
 
    $RX_UNTAINT_PATH
         $RX_UNTAINT_PATH = qr/^([^\x00]*)$/;
 
-    Regular expression used for untainting paths.
+    Regular expression used for untainting paths. Passes all characters
+    except NUL.
+
+   $RX_UNTAINT_POPUP
+        $RX_UNTAINT_POPUP = qr/^([\PC]*)$/;
+
+    Regular expression used for untainting popup parameter values. Passes
+    printable characters.
 
    $RX_UNTAINT_RADIO_GROUP
         $RX_UNTAINT_RADIO_GROUP = qr/^([\PC]*)$/;
 
     Regular expression used for untainting radio group parameter values.
+    Passes printable characters.
 
    $RX_UNTAINT_TEXTAREA
-        $RX_UNTAINT_TEXTAREA = qr/^([\PC\n\r]*)$/;
+        $RX_UNTAINT_TEXTAREA = qr/^([\PC\r\n]*)$/;
 
-    Regular expression used for untainting textarea parameter values.
+    Regular expression used for untainting textarea parameter values. Passes
+    printable characters plus carriage return and linefeed.
 
    $RX_UNTAINT_TEXTFIELD
         $RX_UNTAINT_TEXTFIELD = qr/^([\PC]*)$/;
 
     Regular expression used for untainting textfield parameter values.
+    Passes printable characters.
 
    %TD_ATTR
         %TD_ATTR = (
@@ -98,19 +123,6 @@ DESCRIPTION
     Default attributes used by gen_th().
 
   SUBROUTINES
-   calc_checksum
-        my $md5 = calc_checksum(LIST);
-
-        # LIST are items to be fed into the checksum
-
-    Walks list and expands array references. Passes through call to
-    Digest::MD5::md5_hex() using $CHECKSUM_SALT and walked list.
-
-    LIST items, and referenced array items, should be strings, otherwise the
-    checksum seems to be different for each hit (?).
-
-    Calls Carp::confess() on error.
-
    dump_cookies
         push @debug_html, pre(escapeHTML(dump_cookies()));
 
@@ -147,9 +159,8 @@ DESCRIPTION
 
     [0] A hidden control with name NAME and value VALUE.
 
-    [1] A hidden control with name given by NAME with '_ck' suffix and value
-    given by calling calc_checksum() with $CHECKSUM_SALT and incoming
-    arguments.
+    [1] A hidden control with name given by NAME with '_ck' suffix and
+    md5_hex() checksum value given by $CHECKSUM_SALT and incoming arguments.
 
     Calls Carp::confess() on error.
 
@@ -273,158 +284,170 @@ DESCRIPTION
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for checkboxs
-    ('on').
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_CHECKBOX.
+
+   untaint_hidden
+        my @untainted = untaint_hidden(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to _untaint_regexp() using $RX_PASSTHROUGH.
 
    untaint_password_field
         my @untainted = untaint_password_field(LIST);
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for password
-    fields (printable characters).
+    Passes through call to _untaint_regexp() using
+    $RX_UNTAINT_PASSWORD_FIELD.
 
    untaint_path
         my @untainted = untaint_path(LIST);
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for Unix
-    paths (everying except NULL).
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_PATH.
+
+   untaint_popup
+        my @untainted = untaint_popup(LIST);
+
+        # LIST are strings to be untainted
+
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_POPUP.
 
    untaint_radio_group
         my @untainted = untaint_radio_group(LIST);
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for radio
-    groups (printable characters).
-
-   untaint_regex
-        my @untainted = untaint_regex(RX, LIST);
-
-        # RX is a regular epxression
-
-        # LIST are strings to be untainted
-
-    Applies regular expression to each element in LIST. If LIST is empty,
-    returns void. In list context, process LIST and returns list of first
-    captured substrings for each LIST item. In scalar context, process first
-    LIST item and returns first captured substring.
-
-    Caller usually creates RX with the quote regular expression operator
-    'qr()'.
-
-    Returns undef for LIST elements that are references.
-
-    Calls Carp::confess() on error.
-
-    Calls Carp::cluck() if LIST contains undefined values or references.
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_RADIO_GROUP.
 
    untaint_textarea
         my @untainted = untaint_textarea(LIST);
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for text
-    areas (printable characters plus carriage return and line feed).
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_TEXTAREA.
 
    untaint_textfield
         my @untainted = untaint_textfield(LIST);
 
         # LIST are strings to be untainted
 
-    Passes through call to untaint_regex() using a RX suitable for
-    textfields (printable characters).
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_TEXTFIELD.
 
    validate_checkbox
-        push @errors, validate_checkbox(NAME);
+        my $v = validate_checkbox(RA_ERRORS, NAME);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter name
 
-    If CGI parameter NAME has a defined value, verifies that its value
-    matches its untainted value. Returns list of error messages, if any.
+    Untaints, validates, and returns value of checkbox CGI parameter NAME --
+    must have single value, must contain valid characters (calls
+    untaint_checkbox()), and must contain valid value (compares to
+    $CHECKBOX_ARGS{-value}). If any problems found, pushes error messages
+    onto @RA_ERRORS and returns undef.
 
-    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+    Per CGI.pm, note that return value will also be undef when checkbox is
+    unchecked.
 
     Calls Carp::confess() on error.
 
    validate_hidden
-        push @errors, validate_hidden(NAME);
+        my $v = validate_hidden(RA_ERRORS, NAME);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter name
 
-    If CGI parameter NAME has a defined value, looks for corresponding
-    checksum CGI parameter and verifies checksum. Returns list of error
-    messages, if any.
+    Untaints, validates, and returns value of hidden CGI parameter NAME --
+    hidden parameter(s) required if any parameters exist, checksum parameter
+    is required, checksum parameter must validate as textual field, hidden
+    parameter(s) must contain valid characters, and hidden parameter(s)
+    checksum must match checksum parameter. If any problems found, pushes
+    error messages onto @RA_ERRORS and returns undef.
 
     Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
-   validate_parameter_present
-        push @errors, validate_required_parameters(LIST);
+   validate_parameter_is_required
+        my $ok = validate_parameter_is_required(RA_ERRORS, LIST);
+
+        # RA_ERRORS is reference to array of error messages
 
         # LIST are CGI parameter names
 
-    Verifies that CGI parameters named in LIST have defined values. Returns
-    list of error messages, if any.
+    Verifies that CGI parameters named in LIST exist, including the
+    undefined value. If any problems found, pushes error messages onto
+    @RA_ERRORS and returns undef.
 
     Returns empty list if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
    validate_password_field
-        push @errors, validate_password_field(NAME);
+        my $v = validate_password_field(RA_ERRORS, NAME);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter name
 
-    If CGI parameter NAME has a defined value, verifies that length does not
-    exceed $PASSWORD_FIELD_ARGS{-maxlength} and that value matches its
-    untainted value. Returns list of error messages, if any.
-
-    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+    Untaints, validates, and returns value of password field CGI parameter
+    NAME -- must have single value, must contain valid characters (calls
+    untaint_password_field()), and length must be n characters or less
+    (compares to $PASSWORD_FIELD_ARGS{-maxlength}). If any problems found,
+    pushes error messages onto @RA_ERRORS and returns undef.
 
     Calls Carp::confess() on error.
 
    validate_radio_group
-        push @errors, validate_radio_group(NAME, VALUES);
+        my $v = validate_radio_group(RA_ERRORS, NAME, RA_VALUES);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter nameo
 
-        # VALUES is list (or arrayref) of allowed values
+        # RA_VALUES is reference to array of allowed values
 
-    If CGI parameter NAME has a defined value, verifies that value matches
-    untainted value and that value is one of listed VALUES. Returns list of
-    error messages, if any.
+    Untaints, validates, and returns radio group CGI parameter NAME -- is
+    required, must have single value, must contain valid characters (calls
+    untaint_radio_group()), and must contain valid value (be in @RA_VALUES).
+    If any problems are found, pushes error messages onto @RA_ERRORS and
+    returns undef.
 
-    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+    Returns undef if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 
    validate_textarea
-        push @error, validate_textarea(NAME);
+        my $v = validate_textarea(RA_ERRORS, NAME);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter name
 
-    If CGI parameter NAME has a defined value, verifies that length does not
-    exceed $TEXTAREA_ARGS{-maxlength} and that value matches its untainted
-    value. Returns list of error messages, if any.
-
-    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+    Untaints, validates, and returns value of textarea CGI parameter NAME --
+    must have single value, must contain valid characters (calls
+    untaint_textarea()), and length must be n characters or less (compares
+    to $TEXTAREA_ARGS{-maxlength}). If any problems found, pushes error
+    messages onto @RA_ERRORS and returns undef.
 
     Calls Carp::confess() on error.
 
    validate_textfield
-        push @errors, validate_textfield(NAME);
+        my $v = validate_textfield(RA_ERRORS, NAME);
+
+        # RA_ERRORS is reference to array of error messages
 
         # NAME is a CGI parameter name
 
-    If CGI parameter NAME has a defined value, verifies that length does not
-    exceed $TEXTFIELD_ARGS{-maxlength} and that value matches its untainted
-    value. Returns list of error messages, if any.
-
-    Returns empty list if no CGI parameters exist (e.g. fresh hit).
+    Untaints, validates, and returns value of textfield CGI parameter NAME
+    -- must have single value, must contain valid characters (calls
+    untaint_textfield()), and length must be n characters or less (compares
+    to $TEXTFIELD_ARGS{-maxlength}). If any problems found, pushes error
+    messages onto @RA_ERRORS and returns undef.
 
     Calls Carp::confess() on error.
 
