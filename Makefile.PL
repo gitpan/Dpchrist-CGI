@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: Makefile.PL,v 1.25 2010-12-14 22:43:23 dpchrist Exp $
+# $Id: Makefile.PL,v 1.26 2010-12-15 01:03:20 dpchrist Exp $
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #
@@ -54,9 +54,9 @@ WriteMakefile(
 	Carp			=> 1.08,
 	Data::Dumper		=> 2.121_14,
 	Digest::MD5		=> 2.36_01,
-	Dpchrist::Debug		=> 1.048,
-	Dpchrist::Is		=> 1.030,
-	Dpchrist::LangUtil	=> 1.017,
+	Dpchrist::Debug		=> 1.049,
+	Dpchrist::Is		=> 1.031,
+	Dpchrist::LangUtil	=> 1.018,
 	Exporter		=> 5.62,
 	ExtUtils::MakeMaker	=> 6.54,
 	File::Basename        	=> 2.76,

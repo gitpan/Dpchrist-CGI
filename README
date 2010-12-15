@@ -2,7 +2,7 @@ NAME
     Dpchrist::CGI - utility subroutines for CGI scripts
 
 DESCRIPTION
-    This documentation describes module revision $Revision: 1.61 $.
+    This documentation describes module revision $Revision: 1.62 $.
 
     This is alpha test level software and may change or disappear at any
     time.

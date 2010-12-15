@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.61 2010-12-14 23:21:58 dpchrist Exp $
+# $Id: CGI.pm,v 1.62 2010-12-15 01:03:20 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -73,7 +73,7 @@ our @EXPORT_OK = (
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.61 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.62 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -98,7 +98,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.61 $.
+This documentation describes module revision $Revision: 1.62 $.
 
 
 This is alpha test level software
