@@ -1,4 +1,4 @@
-# $Id: validate_parameter_is_required.t,v 1.6 2010-12-14 05:53:13 dpchrist Exp $
+# $Id: validate_required.t,v 1.7 2010-12-14 23:21:59 dpchrist Exp $
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Test::More tests		=> 6;
 
 use Dpchrist::CGI		qw(
     dump_params
-    validate_parameter_is_required
+    validate_required
 );
 
 use Carp;
@@ -25,7 +25,7 @@ my @n = (
 );
 
 $r = eval {
-    validate_parameter_is_required;
+    validate_required;
 };
 ok(								#     1
     $@ =~ 'ERROR: requires at least 2 arguments',
@@ -35,7 +35,7 @@ ok(								#     1
 );
 
 $r = eval {
-    validate_parameter_is_required undef, @n;
+    validate_required undef, @n;
 };
 ok(								#     2
     $@ =~ 'ERROR: positional argument 0 must be array reference',
@@ -45,7 +45,7 @@ ok(								#     2
 );
 
 $r = eval {
-    validate_parameter_is_required \@e, undef;
+    validate_required \@e, undef;
 };
 ok(								#     3
     $@ =~ 'ERROR: positional argument 1 must be parameter name',
@@ -55,7 +55,7 @@ ok(								#     3
 );
 
 $r = eval {
-    validate_parameter_is_required \@e, @n, undef;
+    validate_required \@e, @n, undef;
 };
 ok(								#     4
     $@ =~ 'ERROR: positional argument 3 must be parameter name',
@@ -67,7 +67,7 @@ ok(								#     4
 $r = eval {
     @e = ();
     param($n[0], __FILE__ . __LINE__);
-    validate_parameter_is_required \@e, @n;
+    validate_required \@e, @n;
 };
 ok(								#     5
     !$@
@@ -82,7 +82,7 @@ ok(								#     5
 $r = eval {
     @e = ();
     param($n[1], __FILE__ . __LINE__);
-    validate_parameter_is_required \@e, @n;
+    validate_required \@e, @n;
 };
 ok(								#     6
     !$@

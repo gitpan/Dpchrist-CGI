@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: _untaint_regexp.t,v 1.9 2010-12-14 05:53:12 dpchrist Exp $
+# $Id: _untaint_regexp.t,v 1.10 2010-12-14 22:54:19 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::_untaint_regexp().
 #
@@ -11,7 +11,7 @@ use warnings;
 
 use Test::More tests => 12;
 
-use Dpchrist::CGI		qw( _untaint_regexp $RX_PASSTHROUGH );
+use Dpchrist::CGI		qw( _untaint_regexp );
 
 use Capture::Tiny		qw( capture );
 use Carp;
@@ -30,6 +30,8 @@ my @a = (
 
 my $o  = bless {}, __FILE__ . __LINE__;
 my $o2 = bless {}, __FILE__ . __LINE__;
+
+my $RX_PASSTHROUGH = qr/(.*)/;
 
 $r = eval {
     _untaint_regexp;

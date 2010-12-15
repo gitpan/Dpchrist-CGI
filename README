@@ -2,7 +2,7 @@ NAME
     Dpchrist::CGI - utility subroutines for CGI scripts
 
 DESCRIPTION
-    This documentation describes module revision $Revision: 1.58 $.
+    This documentation describes module revision $Revision: 1.61 $.
 
     This is alpha test level software and may change or disappear at any
     time.
@@ -14,11 +14,6 @@ DESCRIPTION
         );
 
     Default argments used by gen_checkbox().
-
-   $CHECKSUM_LENGTH
-        $CHECKSUM_LENGTH = 32;
-
-    Length of checksum strings.
 
    $CHECKSUM_SALT
         $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
@@ -34,22 +29,22 @@ DESCRIPTION
 
     Default argments used by gen_password_field().
 
-   $RX_PASSTHROUGH
-        $RX_PASSTHROUGH    => qr/^(.*)$/;
-
-    Regular expression for testing untaint_*() subroutines. Passes all
-    characters.
-
    $RX_UNTAINT_CHECKBOX
         $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
 
     Regular expression for untainting checkbox parameter values. Passes
     printable characters.
 
-   $RX_UNTAINT_CHECKSUM
-        $RX_UNTAINT_CHECKSUM = qr/^[0-9a-f]{32}$/;
+   $_RX_UNTAINT_CHECKSUM
+        $_RX_UNTAINT_CHECKSUM = qr/^([0-9a-f]*)$/;
 
     Regular expression for untainting checksum parameter values.
+
+   $RX_UNTAINT_HIDDEN
+        $RX_UNTAINT_HIDDEN = qr/^([\PC\r\n]*)$/;
+
+    Regular expression used for untainting hidden field parameter values.
+    Passes printable characters plus carriage return and linefeed.
 
    $RX_UNTAINT_PASSWORD_FIELD
         $RX_UNTAINT_PASSWORD_FIELD = qr/^([\PC]*)$/;
@@ -237,36 +232,6 @@ DESCRIPTION
 
     Calls Carp::confess() on error.
 
-   merge_args
-        merge_args(ARRAYREF, ARGS);
-
-        # ARRAYREF is a reference to an array
-
-        # ARGS is a reference to a hash of named arguments
-
-    Inserts or merges named arguments ARGS into array referenced by
-    ARRAYREF. Typically used with CGI.pm widget generating functions, such
-    as textarea(). Referenced array is modified in the process, and
-    key/value pairs may be reordered. Returns void.
-
-    Calls Carp::confess() on error.
-
-   merge_attr
-        merge_attr(ARRAYREF, ATTR);
-
-        # ARRAYREF is a reference to an array
-
-        # ATTR is a reference to a hash of named attributes
-
-    Inserts or merges named attributes ATTR into array referenced by
-    ARRAYREF. Attributes in first element of referenced array take
-    precedence over attributes in ATTR. Typically used with CGI.pm tag
-    generating functions, such as td(). First element of referenced array
-    may be created or modified in the process. Doesn't bother to merge if
-    reference array is empty. Returns void.
-
-    Calls Carp::confess() on error.
-
    nbsp
         push @html, nbsp();
 
@@ -291,7 +256,7 @@ DESCRIPTION
 
         # LIST are strings to be untainted
 
-    Passes through call to _untaint_regexp() using $RX_PASSTHROUGH.
+    Passes through call to _untaint_regexp() using $RX_UNTAINT_HIDDEN.
 
    untaint_password_field
         my @untainted = untaint_password_field(LIST);
@@ -372,8 +337,8 @@ DESCRIPTION
 
     Calls Carp::confess() on error.
 
-   validate_parameter_is_required
-        my $ok = validate_parameter_is_required(RA_ERRORS, LIST);
+   validate_required
+        my $ok = validate_required(RA_ERRORS, LIST);
 
         # RA_ERRORS is reference to array of error messages
 

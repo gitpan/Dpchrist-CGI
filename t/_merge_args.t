@@ -1,11 +1,5 @@
 #! /usr/bin/perl -T
-#######################################################################
-# $Id: merge_args.t,v 1.1 2010-11-21 06:47:54 dpchrist Exp $
-#
-# Test script for merge_args().
-#
-# Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
-#######################################################################
+# $Id: _merge_args.t,v 1.2 2010-12-14 23:21:58 dpchrist Exp $
 
 use strict;
 use warnings;
@@ -15,7 +9,7 @@ use Test::More tests => 10;
 use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI	qw( merge_args );
+use Dpchrist::CGI	qw( _merge_args );
 
 local $Data::Dumper::Sortkeys = 1;
 
@@ -24,7 +18,7 @@ $| = 1;
 my (@a, @a2, $t, $k, $k2, $v, $v2, %h, %h2, $s);
 
 eval {
-    merge_args();
+    _merge_args();
 };
 ok (								#     1
     $@,
@@ -34,7 +28,7 @@ ok (								#     1
 );
 
 eval {
-    merge_args(1);
+    _merge_args(1);
 };
 ok (								#     2
     $@,
@@ -44,7 +38,7 @@ ok (								#     2
 );
 
 eval {
-    merge_args(1, 2, 3);
+    _merge_args(1, 2, 3);
 };
 ok (								#     3
     $@,
@@ -54,7 +48,7 @@ ok (								#     3
 );
 
 eval {
-    merge_args(1, 2);
+    _merge_args(1, 2);
 };
 ok (								#     4
     $@,
@@ -64,7 +58,7 @@ ok (								#     4
 );
 
 eval {
-    merge_args([], 2);
+    _merge_args([], 2);
 };
 ok (								#     5
     $@,
@@ -75,7 +69,7 @@ ok (								#     5
 
 eval {
     @a = ();
-    merge_args(\@a, {});
+    _merge_args(\@a, {});
 };
 ok (								#     6
     !$@
@@ -90,7 +84,7 @@ eval {
     $k = join ' ', __FILE__, __LINE__;
     $v = join ' ', __FILE__, __LINE__;
     @a = ($k => $v);
-    merge_args(\@a, {});
+    _merge_args(\@a, {});
 };
 ok (								#     7
     !$@
@@ -108,7 +102,7 @@ eval {
     $v = join ' ', __FILE__, __LINE__;
     %h = ($k => $v);
     @a2 = @a = ();
-    merge_args(\@a2, \%h);
+    _merge_args(\@a2, \%h);
 };
 ok (								#     8
     !$@
@@ -129,7 +123,7 @@ eval {
     $k2 = join ' ', __FILE__, __LINE__;
     $v2 = join ' ', __FILE__, __LINE__;
     @a2 = @a = ($k2, $v2);
-    merge_args(\@a2, \%h);
+    _merge_args(\@a2, \%h);
     %h2 = @a2;
 };
 ok (								#     9
@@ -150,7 +144,7 @@ eval {
     %h = ($k => $v);
     $v2 = join ' ', __FILE__, __LINE__;
     @a2 = @a = ($k, $v2);
-    merge_args(\@a2, \%h);
+    _merge_args(\@a2, \%h);
     %h2 = @a2;
 };
 ok (								#    10

@@ -1,4 +1,4 @@
-# $Id: _validate_checksum.t,v 1.1 2010-12-14 05:53:12 dpchrist Exp $
+# $Id: _validate_checksum.t,v 1.3 2010-12-14 23:21:59 dpchrist Exp $
 
 use Test::More tests		=> 7;
 
@@ -6,8 +6,7 @@ use strict;
 use warnings;
 
 use Dpchrist::CGI		qw(
-    $CHECKSUM_LENGTH
-    $RX_UNTAINT_CHECKSUM
+    $_RX_UNTAINT_CHECKSUM
     _calc_checksum
     _validate_checksum
     dump_params
@@ -16,6 +15,8 @@ use Dpchrist::CGI		qw(
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+
+use constant CHECKSUM_LENGTH	=> 32;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
@@ -89,8 +90,8 @@ ok(								#     5
 );
 
 $r = eval {
-    $rx = $RX_UNTAINT_CHECKSUM;
-    $RX_UNTAINT_CHECKSUM = qr/()/;
+    $rx = $_RX_UNTAINT_CHECKSUM;
+    $_RX_UNTAINT_CHECKSUM = qr/()/;
     _validate_checksum \@e, $n;
 };
 ok(								#     6
@@ -106,15 +107,15 @@ ok(								#     6
 
 $r = eval {
     @e = ();
-    $RX_UNTAINT_CHECKSUM = $rx;
-    $CHECKSUM_LENGTH = 1;
+    $_RX_UNTAINT_CHECKSUM = $rx;
+    param($n, $s . '0');
     _validate_checksum \@e, $n;
 };
 ok(								#     7
     !$@
     && !defined($r)
     && @e == 1
-    && $e[0] =~ /parameter '$n' length must be 1 characters or less/,
+    && $e[0] =~ /parameter '$n' length must be exactly 32 characters/,
     'call with short maxlength should generate error message'
 ) or confess join(' ',
     Data::Dumper->Dump([$@, $r, \@e, $n, $s], [qw(@ r *e n s)]),

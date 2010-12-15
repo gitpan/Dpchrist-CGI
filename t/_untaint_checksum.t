@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: _untaint_checksum.t,v 1.1 2010-12-14 05:56:13 dpchrist Exp $
+# $Id: _untaint_checksum.t,v 1.2 2010-12-14 22:43:23 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::_untaint_checksum().
 #
@@ -11,7 +11,10 @@ use warnings;
 
 use Test::More tests			=> 6;
 
-use Dpchrist::CGI			qw( _untaint_checksum );
+use Dpchrist::CGI			qw(
+    _calc_checksum
+    _untaint_checksum
+);
 
 use Capture::Tiny			qw ( capture );
 use Carp;
@@ -103,6 +106,6 @@ ok(								#     6
     && $r eq $good,
     'call on good value should return value'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $r], [qw(@ r)]),
+    Data::Dumper->Dump([$@, $r, $good], [qw(@ r good)]),
 );
 

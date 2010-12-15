@@ -5,11 +5,12 @@ Makefile.PL
 lib/Dpchrist/CGI.pm
 t/Dpchrist-CGI.t
 t/_calc_checksum.t
+t/_merge_args.t
+t/_merge_attr.t
 t/_untaint_checksum.t
 t/_untaint_regexp.t
 t/_validate_checksum.t
 t/_validate_textual.t
-t/calc_checksum.t
 t/dump_cookies.t
 t/dump_params.t
 t/gen_checkbox.t
@@ -21,8 +22,6 @@ t/gen_textfield.t
 t/gen_th.t
 t/get_cookies_as_rhh.t
 t/get_params_as_rha.t
-t/merge_args.t
-t/merge_attr.t
 t/nbsp.t
 t/test-compile-all_pm_files_ok.t
 t/test-pod-all_pod_files_ok.t
@@ -36,7 +35,7 @@ t/untaint_textarea.t
 t/untaint_textfield.t
 t/validate_checkbox.t
 t/validate_hidden.t
-t/validate_parameter_is_required.t
+t/validate_required.t
 t/validate_password_field.t
 t/validate_radio_group.t
 t/validate_textarea.t

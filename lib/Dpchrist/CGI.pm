@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.58 2010-12-14 06:05:36 dpchrist Exp $
+# $Id: CGI.pm,v 1.61 2010-12-14 23:21:58 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -17,12 +17,10 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	%CHECKBOX_ARGS
-	$CHECKSUM_LENGTH
 	$CHECKSUM_SALT
 	%PASSWORD_FIELD_ARGS
-	$RX_PASSTHROUGH
 	$RX_UNTAINT_CHECKBOX
-	$RX_UNTAINT_CHECKSUM
+	$RX_UNTAINT_HIDDEN
 	$RX_UNTAINT_PASSWORD_FIELD
 	$RX_UNTAINT_PATH
 	$RX_UNTAINT_RADIO_GROUP
@@ -43,8 +41,6 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	gen_th
 	get_cookies_as_rhh
 	get_params_as_rha
-	merge_args
-	merge_attr
 	nbsp
 	untaint_checkbox
 	untaint_password_field
@@ -54,7 +50,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	untaint_textfield
 	validate_checkbox
 	validate_hidden
-	validate_parameter_is_required
+	validate_required
 	validate_password_field
 	validate_radio_group
 	validate_textarea
@@ -64,8 +60,12 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = (
     @{ $EXPORT_TAGS{'all'} },
     qw(
+	$_RX_UNTAINT_CHECKSUM
 	_calc_checksum
+	_merge_args
+	_merge_attr
 	_untaint_regexp
+	_untaint_checksum
 	_validate_checksum
 	_validate_textual
     ),
@@ -73,7 +73,7 @@ our @EXPORT_OK = (
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.58 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.61 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -87,6 +87,8 @@ use Dpchrist::Debug		qw( :all );
 use Dpchrist::Is		qw( :all );
 use Dpchrist::LangUtil		qw( :all );
 
+use constant CHECKSUM_LENGTH	=> 32;
+
 #######################################################################
 
 =head1 NAME
@@ -96,7 +98,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.58 $.
+This documentation describes module revision $Revision: 1.61 $.
 
 
 This is alpha test level software
@@ -122,18 +124,6 @@ Default argments used by gen_checkbox().
 our %CHECKBOX_ARGS = (
     -value => 'on',
 );
-
-#----------------------------------------------------------------------
-
-=head3 $CHECKSUM_LENGTH
-
-    $CHECKSUM_LENGTH = 32;
-
-Length of checksum strings.
-
-=cut
-
-our $CHECKSUM_LENGTH = 32;
 
 #----------------------------------------------------------------------
 
@@ -168,19 +158,6 @@ our %PASSWORD_FIELD_ARGS = (
 
 #----------------------------------------------------------------------
 
-=head3 $RX_PASSTHROUGH
-
-    $RX_PASSTHROUGH    => qr/^(.*)$/;
-
-Regular expression for testing untaint_*() subroutines.
-Passes all characters.
-
-=cut
-
-our $RX_PASSTHROUGH    = qr/^(.*)$/;
-
-#----------------------------------------------------------------------
-
 =head3 $RX_UNTAINT_CHECKBOX
 
     $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
@@ -194,15 +171,28 @@ our $RX_UNTAINT_CHECKBOX = qr/^([\PC]*)$/;
 
 #----------------------------------------------------------------------
 
-=head3 $RX_UNTAINT_CHECKSUM
+=head3 $_RX_UNTAINT_CHECKSUM
 
-    $RX_UNTAINT_CHECKSUM = qr/^[0-9a-f]{32}$/;
+    $_RX_UNTAINT_CHECKSUM = qr/^([0-9a-f]*)$/;
 
 Regular expression for untainting checksum parameter values.
 
 =cut
 
-our $RX_UNTAINT_CHECKSUM = qr/^([0-9a-f]{32})$/;
+our $_RX_UNTAINT_CHECKSUM = qr/^([0-9a-f]*)$/;
+
+#----------------------------------------------------------------------
+
+=head3 $RX_UNTAINT_HIDDEN
+
+    $RX_UNTAINT_HIDDEN = qr/^([\PC\r\n]*)$/;
+
+Regular expression used for untainting hidden field parameter values.
+Passes printable characters plus carriage return and linefeed.
+
+=cut
+
+our $RX_UNTAINT_HIDDEN = qr/^([\PC\r\n]*)$/;
 
 #----------------------------------------------------------------------
 
@@ -412,6 +402,20 @@ sub _assert_positional_argument_n_must_be_defined
 
 #======================================================================
 
+sub _assert_positional_argument_n_must_be_hashref
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be hash reference",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_hashref $_[1]->[$_[0]];
+    
+    return 1;
+}
+
+#======================================================================
+
 sub _assert_positional_argument_n_must_be_parameter_name
 {
     # my ($n, $ra_args) = @_;
@@ -519,10 +523,66 @@ sub _error_parameter_is_required
 
 #======================================================================
 
+sub _merge_args
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_hashref(1, \@_);
+
+    my ($ra, $rh) = @_;
+    ddump([$ra, $rh], [qw(ra rh)]) if DEBUG;
+
+    my %h = (%$rh, @$ra);
+
+    @$ra = %h;
+    ddump([$ra], [qw(ra)]) if DEBUG;
+
+    dprint('return void') if DEBUG;
+    return;
+}
+
+#======================================================================
+
+sub _merge_attr
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_hashref(1, \@_);
+
+    my ($ra, $rh) = @_;
+    ddump([$ra, $rh], [qw(ra rh)]) if DEBUG;
+
+    if (@$ra) {
+	my $attr = {};
+	
+	if ($ra->[0] && ref($ra->[0]) eq 'HASH') {
+	    my $rh2 = shift @$ra;
+	    $attr = {%$rh, %$rh2};
+	    ddump([$ra, $rh2, $attr], [qw(ra rh2 attr)]) if DEBUG;
+	}
+	else {
+	    $attr = {%$rh};
+	    ddump([$attr], [qw(attr)]) if DEBUG;
+	}
+
+	unshift @$ra, $attr;
+	ddump([$ra], [qw(ra)]) if DEBUG;
+    }
+
+    dprint('return void') if DEBUG;
+    return;
+}
+
+#======================================================================
+
 sub _untaint_checksum
 {
     dprint('passing through call to _untaint_regexp()') if DEBUG;
-    return _untaint_regexp($RX_UNTAINT_CHECKSUM, @_);
+    return _untaint_regexp($_RX_UNTAINT_CHECKSUM, @_);
 }
 
 #======================================================================
@@ -568,11 +628,69 @@ sub _untaint_regexp
 sub _validate_checksum
 {
     _assert_requires_exactly_n_arguments(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
 
-    dprint('passing through call to _validate_textual()') if DEBUG;
-    return _validate_textual(
-	@_, \&_untaint_checksum, $CHECKSUM_LENGTH
-    );
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
+
+    my $r;
+
+    if (scalar @values) {
+
+        _validate_parameter_must_have_single_value(
+	    @_[0, 1], \@values
+	) or goto DONE;
+
+	my $uvalue = _untaint_checksum($values[0]);
+	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
+
+        _validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], $values[0], $uvalue
+	) or goto DONE;
+
+	_validate_parameter_length_must_be_exactly_n_characters(
+	    @_[0, 1], $uvalue, CHECKSUM_LENGTH
+	) or goto DONE;
+
+	$r = $uvalue;
+	ddump([$r], [qw(r)]) if DEBUG;
+    }
+
+  DONE:
+
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
+}
+
+#======================================================================
+
+sub _validate_parameter_length_must_be_exactly_n_characters
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $uvalue, $length) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_defined(2, \@_);
+    _assert_positional_argument_n_must_be_wholenumber(3, \@_);
+
+    my $r = 1;
+
+    if ($_[3] != length $_[2]) {
+	push @{$_[0]}, (
+	    "ERROR: parameter '$_[1]' length must be " . 
+	    "exactly $_[3] characters",
+	);
+	$r = undef;
+    }
+
+  DONE:
+
+    ddump('return', [\@_, $r], [qw(*_ r)]) if DEBUG;
+    return $r;
 }
 
 #======================================================================
@@ -695,7 +813,6 @@ sub _validate_textual
     ddump([\@values], [qw(*values)]) if DEBUG;
 
     my $r;
-    my $uvalue;
 
     if (scalar @values) {
 
@@ -703,7 +820,7 @@ sub _validate_textual
 	    @_[0, 1], \@values
 	) or goto DONE;
 
-	$uvalue = $_[2]->($values[0]);
+	my $uvalue = $_[2]->($values[0]);
 	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
 
         _validate_parameter_must_contain_valid_characters(
@@ -793,7 +910,7 @@ sub gen_checkbox
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_args(\@_, \%CHECKBOX_ARGS);
+    _merge_args(\@_, \%CHECKBOX_ARGS);
 
     ddump('pass through call to CGI::checkbox()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -895,7 +1012,7 @@ sub gen_password_field
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_args(\@_, \%PASSWORD_FIELD_ARGS);
+    _merge_args(\@_, \%PASSWORD_FIELD_ARGS);
 
     ddump('pass through call to CGI::password_field()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -930,7 +1047,7 @@ sub gen_td
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_attr(\@_, \%TD_ATTR);
+    _merge_attr(\@_, \%TD_ATTR);
 
     ddump('pass through call to CGI::td()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -960,7 +1077,7 @@ sub gen_textarea
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_args(\@_, \%TEXTAREA_ARGS);
+    _merge_args(\@_, \%TEXTAREA_ARGS);
 
     ddump('pass through call to CGI::textarea()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -990,7 +1107,7 @@ sub gen_textfield
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_args(\@_, \%TEXTFIELD_ARGS);
+    _merge_args(\@_, \%TEXTFIELD_ARGS);
 
     ddump('pass through call to CGI::textfield()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -1025,7 +1142,7 @@ sub gen_th
 {
     ddump('call', [\@_], [qw(*_)]) if DEBUG;
 
-    merge_attr(\@_, \%TH_ATTR);
+    _merge_attr(\@_, \%TH_ATTR);
 
     ddump('pass through call to CGI::th()',
 	[\@_], [qw(*_)]) if DEBUG;
@@ -1100,121 +1217,6 @@ sub get_params_as_rha
 
 #======================================================================
 
-=head3 merge_args
-
-    merge_args(ARRAYREF, ARGS);
-
-    # ARRAYREF is a reference to an array
-
-    # ARGS is a reference to a hash of named arguments
-
-Inserts or merges named arguments ARGS
-into array referenced by ARRAYREF.
-Typically used with CGI.pm widget generating functions,
-such as textarea().
-Referenced array is modified in the process,
-and key/value pairs may be reordered.
-Returns void.
-
-Calls Carp::confess() on error.
-
-=cut
-
-#----------------------------------------------------------------------
-
-sub merge_args
-{
-    my $arg_dump = Data::Dumper->Dump([\@_], [qw(*_)]);
-
-    my ($ra, $rh) = @_;
-    ddump([$ra, $rh], [qw(ra rh)]) if DEBUG;
-
-    confess 'ERROR: requires two arguments ARRAYREF and HASHREF'
-	unless @_ == 2;
-
-    confess 'ERROR: first argument must be reference to array'
-	unless is_arrayref $ra;
-
-    confess 'ERROR: second argument must be reference to hash'
-	unless is_hashref $rh;
-
-    my %h = (%$rh, @$ra);
-
-    @$ra = %h;
-    ddump([$ra], [qw(ra)]) if DEBUG;
-
-    dprint('return void') if DEBUG;
-    return;
-}
-
-#======================================================================
-
-=head3 merge_attr
-
-    merge_attr(ARRAYREF, ATTR);
-
-    # ARRAYREF is a reference to an array
-
-    # ATTR is a reference to a hash of named attributes
-
-Inserts or merges named attributes ATTR
-into array referenced by ARRAYREF.
-Attributes in first element of referenced array
-take precedence over attributes in ATTR.
-Typically used with CGI.pm tag generating functions,
-such as td().
-First element of referenced array
-may be created or modified in the process.
-Doesn't bother to merge if reference array is empty.
-Returns void.
-
-Calls Carp::confess() on error.
-
-=cut
-
-#----------------------------------------------------------------------
-
-sub merge_attr
-{
-    my $arg_dump = Data::Dumper->Dump([\@_], [qw(*_)]);
-
-    dprint('call', $arg_dump) if DEBUG;
-
-    my ($ra, $rh) = @_;
-    ddump([$ra, $rh], [qw(ra rh)]) if DEBUG;
-
-    confess 'ERROR: requires two arguments ARRAYREF and HASHREF'
-	unless @_ == 2;
-
-    confess 'ERROR: first argument must be reference to array'
-	unless is_arrayref $ra;
-
-    confess 'ERROR: second argument must be reference to hash'
-	unless is_hashref $rh;
-
-    if (@$ra) {
-	my $attr = {};
-	
-	if ($ra->[0] && ref($ra->[0]) eq 'HASH') {
-	    my $rh2 = shift @$ra;
-	    $attr = {%$rh, %$rh2};
-	    ddump([$ra, $rh2, $attr], [qw(ra rh2 attr)]) if DEBUG;
-	}
-	else {
-	    $attr = {%$rh};
-	    ddump([$attr], [qw(attr)]) if DEBUG;
-	}
-
-	unshift @$ra, $attr;
-	ddump([$ra], [qw(ra)]) if DEBUG;
-    }
-
-    dprint('return void') if DEBUG;
-    return;
-}
-
-#======================================================================
-
 =head3 nbsp
 
     push @html, nbsp();
@@ -1276,7 +1278,7 @@ sub untaint_checkbox
     # LIST are strings to be untainted
 
 Passes through call to _untaint_regexp()
-using $RX_PASSTHROUGH.
+using $RX_UNTAINT_HIDDEN.
 
 =cut
 
@@ -1285,7 +1287,7 @@ using $RX_PASSTHROUGH.
 sub untaint_hidden
 {
     dprint('passing through call to _untaint_regexp()') if DEBUG;
-    return _untaint_regexp($RX_PASSTHROUGH, @_);
+    return _untaint_regexp($RX_UNTAINT_HIDDEN, @_);
 }
 
 #======================================================================
@@ -1452,7 +1454,6 @@ sub validate_checkbox
     my @values = param($_[1]);
     ddump([\@values], [qw(*values)]) if DEBUG;
 
-    my $uvalue;
     my $r;
 
     if (scalar @values) {
@@ -1461,7 +1462,7 @@ sub validate_checkbox
 	    @_[0, 1], \@values
 	) or goto DONE;
 
-	$uvalue = untaint_checkbox($values[0]);
+	my $uvalue = untaint_checkbox($values[0]);
 	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
 
 	_validate_parameter_must_contain_valid_characters(
@@ -1478,6 +1479,7 @@ sub validate_checkbox
 	}
 
 	$r = $uvalue;
+	ddump([$r], [qw(r)]) if DEBUG;
     }
 
   DONE:
@@ -1534,18 +1536,18 @@ sub validate_hidden
 	my $nx = $_[1] . '_ck';
 	ddump([$nx], [qw(nx)]) if DEBUG;
 
-	validate_parameter_is_required($_[0], $nx)
-	    or do {
+	unless (validate_required($_[0], $nx)) {
 	    push @{$_[0]}, "ERROR: parameter '$_[1]' checksum missing";
 	    goto DONE;
 	};
 
-	my $ck = _validate_checksum($_[0], $nx)
-	    or do {
+	my $ck = _validate_checksum($_[0], $nx);
+	ddump([$ck], [qw(ck)]) if DEBUG;
+
+	unless ($nx) {
 	    push @{$_[0]}, "ERROR: parameter '$_[1]' checksum bad";
 	    goto DONE;
 	};
-	ddump([$ck], [qw(ck)]) if DEBUG;
 
 	my @uvalues = untaint_hidden(@values);
 	ddump([\@uvalues], [qw(*uvalues)]) if DEBUG;
@@ -1557,7 +1559,7 @@ sub validate_hidden
 	my $md5 = _calc_checksum(-name => $_[1], -value => \@uvalues);
     	ddump([$md5], [qw(md5)]) if DEBUG;
 
-	unless ($ck eq $md5) {
+	unless ($ck && $ck eq $md5) {
 	    push @{$_[0]}, (
 		"ERROR: parameter '$_[1]' checksum bad"
 	    );
@@ -1565,6 +1567,7 @@ sub validate_hidden
 	}
 
 	@r = @uvalues;
+	ddump([\@r], [qw(*r)]) if DEBUG;
     }
     else {
 	_error_parameter_is_required @_[0, 1];
@@ -1584,9 +1587,9 @@ sub validate_hidden
 
 #======================================================================
 
-=head3 validate_parameter_is_required
+=head3 validate_required
 
-    my $ok = validate_parameter_is_required(RA_ERRORS, LIST);
+    my $ok = validate_required(RA_ERRORS, LIST);
 
     # RA_ERRORS is reference to array of error messages
 
@@ -1606,7 +1609,7 @@ Calls Carp::confess() on error.
 
 #----------------------------------------------------------------------
 
-sub validate_parameter_is_required
+sub validate_required
 {
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
@@ -1623,9 +1626,7 @@ sub validate_parameter_is_required
     foreach (@_[1 .. $#_]) {
 	my @v = param($_);
 	unless (0 < scalar @v) {
-	    push @{$_[0]}, join('',
-		"ERROR: parameter '$_' is required",
-	    );
+	    _error_parameter_is_required($_[0], $_);
 	    $r = undef;
 	}
     }
@@ -1740,6 +1741,7 @@ sub validate_radio_group
 	}
 
 	$r = $uvalue;
+	ddump([$r], [qw(r)]) if DEBUG;
     }
     else {
 	_error_parameter_is_required @_[0, 1];

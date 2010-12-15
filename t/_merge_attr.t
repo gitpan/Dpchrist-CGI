@@ -1,11 +1,5 @@
 #! /usr/bin/perl -T
-#######################################################################
-# $Id: merge_attr.t,v 1.2 2010-11-21 06:32:30 dpchrist Exp $
-#
-# Test script for merge_attr().
-#
-# Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
-#######################################################################
+# $Id: _merge_attr.t,v 1.3 2010-12-14 23:21:59 dpchrist Exp $
 
 use strict;
 use warnings;
@@ -15,7 +9,7 @@ use Test::More tests => 11;
 use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI	qw( merge_attr );
+use Dpchrist::CGI	qw( _merge_attr );
 
 local $Data::Dumper::Sortkeys = 1;
 
@@ -24,7 +18,7 @@ $| = 1;
 my (@a, @a2, $t, $k, $k2, $v, $v2, %h, %h2, $s);
 
 eval {
-    merge_attr();
+    _merge_attr();
 };
 ok (								#     1
     $@,
@@ -34,7 +28,7 @@ ok (								#     1
 );
 
 eval {
-    merge_attr(1);
+    _merge_attr(1);
 };
 ok (								#     2
     $@,
@@ -44,7 +38,7 @@ ok (								#     2
 );
 
 eval {
-    merge_attr(1, 2, 3);
+    _merge_attr(1, 2, 3);
 };
 ok (								#     3
     $@,
@@ -54,7 +48,7 @@ ok (								#     3
 );
 
 eval {
-    merge_attr(1, 2);
+    _merge_attr(1, 2);
 };
 ok (								#     4
     $@,
@@ -64,7 +58,7 @@ ok (								#     4
 );
 
 eval {
-    merge_attr([], 2);
+    _merge_attr([], 2);
 };
 ok (								#     5
     $@,
@@ -75,7 +69,7 @@ ok (								#     5
 
 eval {
     @a = ();
-    merge_attr(\@a, {});
+    _merge_attr(\@a, {});
 };
 ok (								#     6
     !$@
@@ -91,7 +85,7 @@ eval {
     $v = join ' ', __FILE__, __LINE__;
     %h = ($k => $v);
     @a = (\%h);
-    merge_attr(\@a, {});
+    _merge_attr(\@a, {});
 };
 ok (								#     7
     !$@
@@ -111,7 +105,7 @@ eval {
     $v = join ' ', __FILE__, __LINE__;
     %h = ($k => $v);
     @a = ();
-    merge_attr(\@a, \%h);
+    _merge_attr(\@a, \%h);
 };
 ok (								#     8
     !$@
@@ -130,7 +124,7 @@ eval {
 	join(' ', __FILE__, __LINE__),
 	join(' ', __FILE__, __LINE__),
     );
-    merge_attr(\@a2, \%h);
+    _merge_attr(\@a2, \%h);
 };
 ok (								#     9
     !$@
@@ -160,7 +154,7 @@ eval {
 	join(' ', __FILE__, __LINE__),
 	join(' ', __FILE__, __LINE__),
     );
-    merge_attr(\@a2, \%h2);
+    _merge_attr(\@a2, \%h2);
 };
 ok (								#    10
     !$@
@@ -190,7 +184,7 @@ eval {
 	join(' ', __FILE__, __LINE__),
 	join(' ', __FILE__, __LINE__),
     );
-    merge_attr(\@a2, \%h2);
+    _merge_attr(\@a2, \%h2);
 };
 ok (								#    11
     !$@

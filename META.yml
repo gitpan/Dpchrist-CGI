@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Dpchrist-CGI
-version:            1.058
+version:            1.061
 abstract:           utility subroutines for CGI scripts
 author:
     - David Paul Christensen <dpchrist@holgerdanske.com>

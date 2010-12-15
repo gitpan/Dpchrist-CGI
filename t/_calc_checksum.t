@@ -1,4 +1,4 @@
-# $Id: _calc_checksum.t,v 1.1 2010-12-14 05:53:12 dpchrist Exp $
+# $Id: _calc_checksum.t,v 1.2 2010-12-14 22:43:23 dpchrist Exp $
 
 use Test::More tests		=> 3;
 
@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Dpchrist::CGI		qw(
-    $CHECKSUM_LENGTH
     $CHECKSUM_SALT
     _calc_checksum
 );
@@ -15,6 +14,8 @@ use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
 use Digest::MD5                 qw( md5_hex );
+
+use constant CHECKSUM_LENGTH	=> 32;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
@@ -53,10 +54,10 @@ ok(								#     3
     !$@
     && defined($r)
     && $r eq $t
-    && length $r == $CHECKSUM_LENGTH,
+    && length $r == CHECKSUM_LENGTH,
     'call with valid argument should return checksum'
 ) or confess join(' ',
-    Data::Dumper->Dump([$@, $r, $s, $t, $CHECKSUM_LENGTH],
-		     [qw(@   r   s   t   CHECKSUM_LENGTH)]),
+    Data::Dumper->Dump([$@, $r, $s, $t],
+		     [qw(@   r   s   t)]),
 );
 
