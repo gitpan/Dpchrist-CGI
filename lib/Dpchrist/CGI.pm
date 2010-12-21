@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.68 2010-12-20 03:51:13 dpchrist Exp $
+# $Id: CGI.pm,v 1.69 2010-12-21 21:49:32 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -82,7 +82,7 @@ our @EXPORT_OK = (
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.68 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.69 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -107,7 +107,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.68 $.
+This documentation describes module revision $Revision: 1.69 $.
 
 
 This is alpha test level software
@@ -617,7 +617,7 @@ sub _test_a_exclusive
     my @html = (
 	a(
 	    {
-		-href => $_[1] . '?' . join('&',
+		-href => $_[2] . '?' . join('&',
     		    @{$_[3]},
 		),
 	    },
@@ -625,7 +625,7 @@ sub _test_a_exclusive
 	),
 	a(
 	    {
-		-href => $_[1] . '?' . join('&',
+		-href => $_[2] . '?' . join('&',
 		    $_[0] . '=' . $_[1][-1],
 		    $_[0] . '=' . $_[1][-2],
     		    @{$_[3]},
@@ -635,7 +635,7 @@ sub _test_a_exclusive
 	),
 	a(
 	    {
-		-href => $_[1] . '?' . join('&',
+		-href => $_[2] . '?' . join('&',
 		    $_[0] . '=BEL%07',
     		    @{$_[3]},
 		),
@@ -644,7 +644,7 @@ sub _test_a_exclusive
 	),
 	a(
 	    {
-		-href => $_[1] . '?' . join('&',
+		-href => $_[2] . '?' . join('&',
 	    	    $_[0] . '=123456789 ',
     		    @{$_[3]},
 		),
