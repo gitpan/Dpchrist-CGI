@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_hidden.t,v 1.3 2010-12-14 05:53:12 dpchrist Exp $
+# $Id: gen_hidden.t,v 1.5 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_hidden().
 #
@@ -16,6 +16,7 @@ use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI		qw( _calc_checksum gen_hidden );
+use File::Basename;
 
 local $| 			= 1;
 local $Data::Dumper::Sortkeys 	= 1;
@@ -53,7 +54,7 @@ ok (								#     3
 );
 
 @r = eval {
-    $s = join ' ', __FILE__, __LINE__;
+    $s = join ' ', basename(__FILE__), __LINE__;
     gen_hidden(-name => $s, 3, 4);
 };
 ok (								#     4
@@ -74,7 +75,7 @@ ok (								#     5
 );
 
 @r = eval {
-    $s2 = join ' ', __FILE__, __LINE__;
+    $s2 = join ' ', basename(__FILE__), __LINE__;
     @a = (-name => $s, -value => $s2);
     $t = hidden(@a);
     $md5 = _calc_checksum(@a);

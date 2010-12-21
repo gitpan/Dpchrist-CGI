@@ -1,4 +1,4 @@
-# $Id: validate_radio_group.t,v 1.2 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: validate_radio_group.t,v 1.4 2010-12-20 06:05:21 dpchrist Exp $
 
 use strict;
 use warnings;
@@ -13,6 +13,7 @@ use Dpchrist::CGI		qw(
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
@@ -20,7 +21,7 @@ $Data::Dumper::Sortkeys		= 1;
 my $r;
 
 my @e,
-my $n = __FILE__ . __LINE__;
+my $n = basename(__FILE__) . __LINE__;
 my @v = (
     __LINE__,
     __LINE__,
@@ -91,7 +92,7 @@ ok(								#     5
 
 $r = eval {
     @e = ();
-    param(__FILE__, __LINE__);
+    param(basename(__FILE__), __LINE__);
     validate_radio_group \@e, $n, \@v;
 };
 ok(								#     6
@@ -109,8 +110,8 @@ ok(								#     6
 $r = eval {
     @e = ();
     param($n,
-	__FILE__ . __LINE__,
-	__FILE__ . __LINE__,
+	basename(__FILE__) . __LINE__,
+	basename(__FILE__) . __LINE__,
     );
     validate_radio_group \@e, $n, \@v;
 };
@@ -144,7 +145,7 @@ ok(								#     8
 
 $r = eval {
     @e = ();
-    param($n, __FILE__ . __LINE__);
+    param($n, basename(__FILE__) . __LINE__);
     validate_radio_group \@e, $n, \@v;
 };
 ok(								#     9

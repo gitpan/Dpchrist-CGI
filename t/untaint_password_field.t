@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: untaint_password_field.t,v 1.1 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: untaint_password_field.t,v 1.3 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_password_field().
 #
@@ -16,6 +16,7 @@ use Dpchrist::CGI			qw( untaint_password_field );
 use Capture::Tiny			qw ( capture );
 use Carp;
 use Data::Dumper;
+use File::Basename;
 
 $|					= 1;
 $Data::Dumper::Sortkeys			= 1;
@@ -23,7 +24,7 @@ $Data::Dumper::Sortkeys			= 1;
 my ($r, @r, $s);
 my ($stdout, $stderr);
 
-my $good = join ' ', __FILE__, __LINE__;
+my $good = join ' ', basename(__FILE__), __LINE__;
 
 my $bad;
 for (my $i = 0; $i < 32; $i++) {

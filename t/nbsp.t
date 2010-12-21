@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: nbsp.t,v 1.1 2010-12-02 19:17:01 dpchrist Exp $
+# $Id: nbsp.t,v 1.3 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for nbsp().
 #
@@ -12,8 +12,9 @@ use warnings;
 
 use Test::More tests => 6;
 
+use CGI				qw( nbsp );
+
 use Carp;
-use CGI				qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI		qw( nbsp );
 

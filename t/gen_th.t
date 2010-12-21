@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_th.t,v 1.2 2010-11-24 22:12:24 dpchrist Exp $
+# $Id: gen_th.t,v 1.4 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_th().
 #
@@ -16,7 +16,7 @@ use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI		qw( gen_th );
-
+use File::Basename;
 
 local $|			= 1;
 local $Data::Dumper::Sortkeys	= 1;
@@ -40,7 +40,7 @@ ok (								#     1
 
 $r = eval {
     %Dpchrist::CGI::TH_ATTR = ();
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     $t = th($s);
     gen_th($s);
 };
@@ -91,7 +91,7 @@ ok (								#     4
 
 $r = eval {
     %Dpchrist::CGI::TH_ATTR = ();
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     $t = th(\%h, $s);
     gen_th(\%h, $s);
@@ -106,7 +106,7 @@ ok (								#     5
 );
 
 $r = eval {
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     $t = th(\%h, $s);
     %Dpchrist::CGI::TH_ATTR = %h;
@@ -122,7 +122,7 @@ ok (								#     6
 );
 
 $r = eval {
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     %h2 = (-width => __LINE__);
     %Dpchrist::CGI::TH_ATTR = %h2;

@@ -1,4 +1,4 @@
-# $Id: validate_required.t,v 1.7 2010-12-14 23:21:59 dpchrist Exp $
+# $Id: validate_required.t,v 1.9 2010-12-20 06:05:21 dpchrist Exp $
 
 use strict;
 use warnings;
@@ -13,6 +13,7 @@ use Dpchrist::CGI		qw(
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
@@ -20,8 +21,8 @@ $Data::Dumper::Sortkeys		= 1;
 my $r;
 my @e;
 my @n = (
-    __FILE__ . __LINE__,
-    __FILE__ . __LINE__,
+    basename(__FILE__) . __LINE__,
+    basename(__FILE__) . __LINE__,
 );
 
 $r = eval {
@@ -66,7 +67,7 @@ ok(								#     4
 
 $r = eval {
     @e = ();
-    param($n[0], __FILE__ . __LINE__);
+    param($n[0], basename(__FILE__) . __LINE__);
     validate_required \@e, @n;
 };
 ok(								#     5
@@ -81,7 +82,7 @@ ok(								#     5
 
 $r = eval {
     @e = ();
-    param($n[1], __FILE__ . __LINE__);
+    param($n[1], basename(__FILE__) . __LINE__);
     validate_required \@e, @n;
 };
 ok(								#     6

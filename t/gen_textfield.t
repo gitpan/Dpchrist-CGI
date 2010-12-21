@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_textfield.t,v 1.1 2010-11-23 04:57:11 dpchrist Exp $
+# $Id: gen_textfield.t,v 1.3 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_textfield().
 #
@@ -16,6 +16,7 @@ use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI	qw( gen_textfield );
+use File::Basename;
 
 local $Data::Dumper::Sortkeys = 1;
 
@@ -39,7 +40,7 @@ ok (								#     1
 
 $r = eval {
     %Dpchrist::CGI::TEXTFIELD_ARGS = ();
-    %h = (-name => __FILE__ . __LINE__);
+    %h = (-name => basename(__FILE__) . __LINE__);
     $t = textfield(%h);
     gen_textfield(%h);
 };
@@ -70,7 +71,7 @@ ok (								#     3
 $r = eval {
     %h = (-size => __LINE__);
     %Dpchrist::CGI::TEXTFIELD_ARGS = (%h);
-    %h2 = (-name => __FILE__ . __LINE__);
+    %h2 = (-name => basename(__FILE__) . __LINE__);
     $t = textfield(%h, %h2);
     gen_textfield(%h2);
 };

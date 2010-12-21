@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: validate_checkbox.t,v 1.3 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: validate_checkbox.t,v 1.4 2010-12-20 03:51:14 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::validate_checkbox().
 #
@@ -76,7 +76,7 @@ ok(								#     4
 );
 
 $r = eval {
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     validate_checkbox \@e, $s;
 };
 ok(								#     5
@@ -90,10 +90,10 @@ ok(								#     5
 
 $r = eval {
     @e = ();
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     param($s,
-	__FILE__ . __LINE__,
-	__FILE__ . __LINE__,
+	basename(__FILE__) . __LINE__,
+	basename(__FILE__) . __LINE__,
     );
     validate_checkbox \@e, $s;
 };
@@ -109,7 +109,7 @@ ok(								#     6
 
 $r = eval {
     @e = ();
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     param($s, "BEL\x07");
     validate_checkbox \@e, $s;
 };
@@ -126,8 +126,8 @@ ok(								#     7
 
 $r = eval {
     @e = ();
-    $s = __FILE__ . __LINE__;
-    param($s, __FILE__ . __LINE__);
+    $s = basename(__FILE__) . __LINE__;
+    param($s, basename(__FILE__) . __LINE__);
     validate_checkbox \@e, $s;
 };
 ok(								#     8
@@ -143,8 +143,8 @@ ok(								#     8
 
 $r = eval {
     @e = ();
-    $s = __FILE__ . __LINE__;
-    $CHECKBOX_ARGS{-value} = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
+    $CHECKBOX_ARGS{-value} = basename(__FILE__) . __LINE__;
     param($s, $CHECKBOX_ARGS{-value});
     validate_checkbox \@e, $s;
 };

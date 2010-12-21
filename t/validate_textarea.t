@@ -1,4 +1,4 @@
-# $Id: validate_textarea.t,v 1.5 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: validate_textarea.t,v 1.7 2010-12-20 06:05:21 dpchrist Exp $
 
 use Test::More tests		=> 6;
 
@@ -15,13 +15,14 @@ use Dpchrist::CGI		qw(
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
 
 
 my @e;
-my $n = __FILE__ . __LINE__;
+my $n = basename(__FILE__) . __LINE__;
 my $rx;
 my $m;
 
@@ -59,7 +60,7 @@ ok(								#     3
 );
 
 $r = eval {
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     param($n, $s);
     validate_textarea \@e, $n;
 };
@@ -76,7 +77,7 @@ ok(								#     4
 $r = eval {
     $rx = $RX_UNTAINT_TEXTAREA;
     $RX_UNTAINT_TEXTAREA = qr/()/;
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     param($n, $s);
     validate_textarea \@e, $n;
 };

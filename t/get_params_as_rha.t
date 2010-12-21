@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: get_params_as_rha.t,v 1.3 2010-11-17 21:23:08 dpchrist Exp $
+# $Id: get_params_as_rha.t,v 1.5 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for get_params_as_rha() with functional interface.
 #
@@ -12,14 +12,15 @@ use warnings;
 
 use Test::More tests => 14;
 
+use Dpchrist::CGI	qw( get_params_as_rha );
+
 use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI	qw( :all );
-
-local $Data::Dumper::Sortkeys = 1;
+use File::Basename;
 
 $| = 1;
+$Data::Dumper::Sortkeys = 1;
 
 {
 my ($r, @r, $s, $s2, $q);
@@ -34,13 +35,13 @@ ok (								#     1
     && scalar keys %$r == 0,
     "get_params_as_rha() with no CGI parameters " .
     "should return empty hash"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    $s2 = join ' ', __FILE__, __LINE__;
+    $s = join ' ', basename(__FILE__), __LINE__;
+    $s2 = join ' ', basename(__FILE__), __LINE__;
     param(-name => $s, -value => $s2);
     param($s);
 };
@@ -49,7 +50,7 @@ ok (								#     2
     && $r
     && $r eq $s2,
     "use CGI::param() to set test parameter"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 
@@ -65,7 +66,7 @@ ok (								#     3
     && scalar @{$r->{$s}} == 1
     && $r->{$s}[0] eq $s2,
     "get_params_as_rha() should return corresponding hashref"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $r], [qw(@ r)]),
 );
 }
@@ -81,7 +82,7 @@ ok (								#     4
     && $q->isa('CGI')
     && $r->isa('CGI'),
     'create a CGI test object'
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, $r], [qw(@ q r)]),
 );
 
@@ -92,7 +93,7 @@ ok (								#     5
     !$@
     && @r == 0,
     "there should be no initial CGI parameters"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, \@r], [qw(@ q *r)]),
 );
 
@@ -105,13 +106,13 @@ ok (								#     6
     && ref $r eq "HASH"
     && scalar keys %$r == 0,
     "call should return empty hash"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, $r], [qw(@ q r)]),
 );
 
 $r = eval {
-    $s = join ' ', __FILE__, __LINE__;
-    $s2 = join ' ', __FILE__, __LINE__;
+    $s = join ' ', basename(__FILE__), __LINE__;
+    $s2 = join ' ', basename(__FILE__), __LINE__;
     $q->param(-name => $s, -value => $s2);
     $q->param($s);
 };
@@ -120,7 +121,7 @@ ok (								#     7
     && $r
     && $r eq $s2,
     "set test parameter in test object"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, $r], [qw(@ q r)]),
 );
 
@@ -136,7 +137,7 @@ ok (								#     8
     && scalar @{$r->{$s}} == 1
     && $r->{$s}[0] eq $s2,
     "call should return corresponding hashref"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, $r], [qw(@ q r)]),
 );
 
@@ -148,7 +149,7 @@ ok (								#     9
     && $q2->isa('CGI')
     && $r->isa('CGI'),
     'create another CGI test object'
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q2, $r], [qw(@ q2 r)]),
 );
 
@@ -159,7 +160,7 @@ ok (								#    10
     !$@
     && @r == 0,
     "there should be no initial CGI parameters"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q2, \@r], [qw(@ q2 *r)]),
 );
 
@@ -172,13 +173,13 @@ ok (								#    11
     && ref $r eq "HASH"
     && scalar keys %$r == 0,
     "call should return empty hash"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q2, $r], [qw(@ q2 r)]),
 );
 
 $r = eval {
-    $s3 = join ' ', __FILE__, __LINE__;
-    $s4 = join ' ', __FILE__, __LINE__;
+    $s3 = join ' ', basename(__FILE__), __LINE__;
+    $s4 = join ' ', basename(__FILE__), __LINE__;
     $q2->param(-name => $s3, -value => $s4);
     $q2->param($s3);
 };
@@ -187,7 +188,7 @@ ok (								#    12
     && $r
     && $r eq $s4,
     "set different test parameter in second test object"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q2, $r], [qw(@ q2 r)]),
 );
 
@@ -203,7 +204,7 @@ ok (								#    13
     && scalar @{$r->{$s3}} == 1
     && $r->{$s3}[0] eq $s4,
     "call should return corresponding hashref"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q2, $r], [qw(@ q2 r)]),
 );
 
@@ -219,7 +220,7 @@ ok (								#    14
     && scalar @{$r->{$s}} == 1
     && $r->{$s}[0] eq $s2,
     "first object should be unchanged"
-) or confess join(" ", __FILE__, __LINE__,
+) or confess join(" ", basename(__FILE__), __LINE__,
     Data::Dumper->Dump([$@, $q, $r], [qw(@ q r)]),
 );
 }

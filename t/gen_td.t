@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_td.t,v 1.1 2010-11-21 04:02:28 dpchrist Exp $
+# $Id: gen_td.t,v 1.3 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_td().
 #
@@ -10,16 +10,17 @@
 use strict;
 use warnings;
 
+use Dpchrist::CGI		qw( gen_td );
+
 use Test::More tests => 7;
 
 use Carp;
-use CGI			qw( :standard );
+use CGI				qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI	qw( gen_td );
+use File::Basename;
 
-local $Data::Dumper::Sortkeys = 1;
-
-$| = 1;
+$|				= 1;
+$Data::Dumper::Sortkeys 	= 1;
 
 my ($r, @r, $s, $t, @a, %h, %h2);
 
@@ -39,7 +40,7 @@ ok (								#     1
 
 $r = eval {
     %Dpchrist::CGI::TD_ATTR = ();
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     $t = td($s);
     gen_td($s);
 };
@@ -90,7 +91,7 @@ ok (								#     4
 
 $r = eval {
     %Dpchrist::CGI::TD_ATTR = ();
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     $t = td(\%h, $s);
     gen_td(\%h, $s);
@@ -105,7 +106,7 @@ ok (								#     5
 );
 
 $r = eval {
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     $t = td(\%h, $s);
     %Dpchrist::CGI::TD_ATTR = %h;
@@ -121,7 +122,7 @@ ok (								#     6
 );
 
 $r = eval {
-    $s = join ' ',__FILE__, __LINE__;
+    $s = join ' ',basename(__FILE__), __LINE__;
     %h = (-width => __LINE__);
     %h2 = (-width => __LINE__);
     %Dpchrist::CGI::TD_ATTR = %h2;

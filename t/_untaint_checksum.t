@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: _untaint_checksum.t,v 1.2 2010-12-14 22:43:23 dpchrist Exp $
+# $Id: _untaint_checksum.t,v 1.4 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::_untaint_checksum().
 #
@@ -19,6 +19,7 @@ use Dpchrist::CGI			qw(
 use Capture::Tiny			qw ( capture );
 use Carp;
 use Data::Dumper;
+use File::Basename;
 
 $|					= 1;
 $Data::Dumper::Sortkeys			= 1;
@@ -28,7 +29,7 @@ my @r;
 my $s;
 my ($stdout, $stderr);
 
-my $good = _calc_checksum(__FILE__, __LINE__);
+my $good = _calc_checksum(basename(__FILE__), __LINE__);
 
 my $bad;
 for (my $i = 0; $i < 32; $i++) {

@@ -1,9 +1,9 @@
-# $Id: _validate_checksum.t,v 1.3 2010-12-14 23:21:59 dpchrist Exp $
-
-use Test::More tests		=> 7;
+# $Id: _validate_checksum.t,v 1.5 2010-12-20 06:05:20 dpchrist Exp $
 
 use strict;
 use warnings;
+
+use Test::More tests		=> 7;
 
 use Dpchrist::CGI		qw(
     $_RX_UNTAINT_CHECKSUM
@@ -15,6 +15,7 @@ use Dpchrist::CGI		qw(
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 use constant CHECKSUM_LENGTH	=> 32;
 
@@ -23,7 +24,7 @@ $Data::Dumper::Sortkeys		= 1;
 
 
 my @e;
-my $n = __FILE__ . __LINE__;
+my $n = basename(__FILE__) . __LINE__;
 my $rx;
 my $m;
 
@@ -74,7 +75,7 @@ ok(								#     4
 );
 
 $r = eval {
-    $s = _calc_checksum(__FILE__, __LINE__);
+    $s = _calc_checksum(basename(__FILE__), __LINE__);
     param($n, $s);
     _validate_checksum \@e, $n;
 };

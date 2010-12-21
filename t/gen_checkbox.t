@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_checkbox.t,v 1.2 2010-11-25 19:10:54 dpchrist Exp $
+# $Id: gen_checkbox.t,v 1.4 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_checkbox().
 #
@@ -16,6 +16,7 @@ use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI	qw( gen_checkbox );
+use File::Basename;
 
 $| = 1;
 local $Data::Dumper::Sortkeys = 1;
@@ -27,7 +28,7 @@ my ($r, @r, @a, $t, %h, %h2, %h3);
 
 $r = eval {
     %Dpchrist::CGI::CHECKBOX_ARGS = ();
-    %h = (-name => __FILE__ . __LINE__);
+    %h = (-name => basename(__FILE__) . __LINE__);
     $t = checkbox(%h);
     gen_checkbox(%h);
 };
@@ -41,7 +42,7 @@ ok (								#     1
 );
 
 $r = eval {
-    %h = (-name => __FILE__ . __LINE__);
+    %h = (-name => basename(__FILE__) . __LINE__);
     %Dpchrist::CGI::CHECKBOX_ARGS = (%h);
     $t = checkbox(%h);
     gen_checkbox();
@@ -70,7 +71,7 @@ ok (								#     3
 );
 
 $r = eval {
-    %h3 = (-name => __FILE__ . __LINE__);
+    %h3 = (-name => basename(__FILE__) . __LINE__);
     %Dpchrist::CGI::CHECKBOX_ARGS = (%h);
     $t = checkbox(%h3);
     gen_checkbox(%h3);

@@ -1,6 +1,6 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: gen_password_field.t,v 1.1 2010-11-23 04:57:10 dpchrist Exp $
+# $Id: gen_password_field.t,v 1.3 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for gen_password_field().
 #
@@ -16,10 +16,10 @@ use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
 use Dpchrist::CGI	qw( gen_password_field );
-
-local $Data::Dumper::Sortkeys = 1;
+use File::Basename;
 
 $| = 1;
+$Data::Dumper::Sortkeys = 1;
 
 my ($r, @r, $t, %h, %h2);
 
@@ -39,7 +39,7 @@ ok (								#     1
 
 $r = eval {
     %Dpchrist::CGI::PASSWORD_FIELD_ARGS = ();
-    %h = (-name => __FILE__ . __LINE__);
+    %h = (-name => basename(__FILE__) . __LINE__);
     $t = password_field(%h);
     gen_password_field(%h);
 };
@@ -70,7 +70,7 @@ ok (								#     3
 $r = eval {
     %h = (-size => __LINE__);
     %Dpchrist::CGI::PASSWORD_FIELD_ARGS = (%h);
-    %h2 = (-name => __FILE__ . __LINE__);
+    %h2 = (-name => basename(__FILE__) . __LINE__);
     $t = password_field(%h, %h2);
     gen_password_field(%h2);
 };

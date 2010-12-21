@@ -1,9 +1,9 @@
-# $Id: _calc_checksum.t,v 1.2 2010-12-14 22:43:23 dpchrist Exp $
-
-use Test::More tests		=> 3;
+# $Id: _calc_checksum.t,v 1.4 2010-12-20 06:05:19 dpchrist Exp $
 
 use strict;
 use warnings;
+
+use Test::More tests		=> 3;
 
 use Dpchrist::CGI		qw(
     $CHECKSUM_SALT
@@ -14,6 +14,7 @@ use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
 use Digest::MD5                 qw( md5_hex );
+use File::Basename;
 
 use constant CHECKSUM_LENGTH	=> 32;
 
@@ -46,7 +47,7 @@ ok(								#     2
 );
 
 $r = eval {
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     $t = md5_hex($CHECKSUM_SALT, $s);
     _calc_checksum $s;
 };

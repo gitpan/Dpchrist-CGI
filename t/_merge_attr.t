@@ -1,19 +1,19 @@
 #! /usr/bin/perl -T
-# $Id: _merge_attr.t,v 1.3 2010-12-14 23:21:59 dpchrist Exp $
+# $Id: _merge_attr.t,v 1.5 2010-12-20 06:05:19 dpchrist Exp $
 
 use strict;
 use warnings;
 
 use Test::More tests => 11;
 
+use Dpchrist::CGI	qw( _merge_attr );
+
 use Carp;
 use CGI			qw( :standard );
 use Data::Dumper;
-use Dpchrist::CGI	qw( _merge_attr );
-
-local $Data::Dumper::Sortkeys = 1;
 
 $| = 1;
+$Data::Dumper::Sortkeys = 1;
 
 my (@a, @a2, $t, $k, $k2, $v, $v2, %h, %h2, $s);
 
@@ -81,8 +81,8 @@ ok (								#     6
 );
 
 eval {
-    $k = join ' ', __FILE__, __LINE__;
-    $v = join ' ', __FILE__, __LINE__;
+    $k = __FILE__ . __LINE__;
+    $v = __FILE__ . __LINE__;
     %h = ($k => $v);
     @a = (\%h);
     _merge_attr(\@a, {});
@@ -101,8 +101,8 @@ ok (								#     7
 );
 
 eval {
-    $k = join ' ', __FILE__, __LINE__;
-    $v = join ' ', __FILE__, __LINE__;
+    $k = __FILE__ . __LINE__;
+    $v = __FILE__ . __LINE__;
     %h = ($k => $v);
     @a = ();
     _merge_attr(\@a, \%h);
@@ -117,12 +117,12 @@ ok (								#     8
 );
 
 eval {
-    $k = join ' ', __FILE__, __LINE__;
-    $v = join ' ', __FILE__, __LINE__;
+    $k = __FILE__ . __LINE__;
+    $v = __FILE__ . __LINE__;
     %h = ($k => $v);
     @a2 = @a = (
-	join(' ', __FILE__, __LINE__),
-	join(' ', __FILE__, __LINE__),
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
     );
     _merge_attr(\@a2, \%h);
 };
@@ -143,16 +143,16 @@ ok (								#     9
 );
 
 eval {
-    $k = join ' ', __FILE__, __LINE__;
-    $v = join ' ', __FILE__, __LINE__;
+    $k = __FILE__ . __LINE__;
+    $v = __FILE__ . __LINE__;
     %h = ($k => $v);
-    $k2 = join ' ', __FILE__, __LINE__;
-    $v2 = join ' ', __FILE__, __LINE__;
+    $k2 = __FILE__ . __LINE__;
+    $v2 = __FILE__ . __LINE__;
     %h2 = ($k2 => $v2);
     @a2 = @a = (
 	\%h,
-	join(' ', __FILE__, __LINE__),
-	join(' ', __FILE__, __LINE__),
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
     );
     _merge_attr(\@a2, \%h2);
 };
@@ -174,15 +174,15 @@ ok (								#    10
 );
 
 eval {
-    $k = join ' ', __FILE__, __LINE__;
-    $v = join ' ', __FILE__, __LINE__;
+    $k = __FILE__ . __LINE__;
+    $v = __FILE__ . __LINE__;
     %h = ($k => $v);
-    $v2 = join ' ', __FILE__, __LINE__;
+    $v2 = __FILE__ . __LINE__;
     %h2 = ($k => $v2);
     @a2 = @a = (
 	\%h,
-	join(' ', __FILE__, __LINE__),
-	join(' ', __FILE__, __LINE__),
+	__FILE__ . __LINE__,
+	__FILE__ . __LINE__,
     );
     _merge_attr(\@a2, \%h2);
 };

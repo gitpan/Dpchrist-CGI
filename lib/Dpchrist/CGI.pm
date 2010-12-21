@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: CGI.pm,v 1.62 2010-12-15 01:03:20 dpchrist Exp $
+# $Id: CGI.pm,v 1.68 2010-12-20 03:51:13 dpchrist Exp $
 #######################################################################
 # package:
 #----------------------------------------------------------------------
@@ -42,6 +42,14 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	get_cookies_as_rhh
 	get_params_as_rha
 	nbsp
+	test_a_checkbox
+	test_a_hidden
+	test_a_password_field
+	test_a_popup
+	test_a_radio_group
+	test_a_required
+	test_a_textarea
+	test_a_textfield
 	untaint_checkbox
 	untaint_password_field
 	untaint_path
@@ -52,6 +60,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	validate_hidden
 	validate_required
 	validate_password_field
+	validate_popup
 	validate_radio_group
 	validate_textarea
 	validate_textfield
@@ -73,7 +82,7 @@ our @EXPORT_OK = (
 
 our @EXPORT = qw( );
 
-our $VERSION = sprintf "%d.%03d", q$Revision: 1.62 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%03d", q$Revision: 1.68 $ =~ /(\d+)/g;
 
 #######################################################################
 # uses:
@@ -98,7 +107,7 @@ Dpchrist::CGI - utility subroutines for CGI scripts
 
 =head1 DESCRIPTION
 
-This documentation describes module revision $Revision: 1.62 $.
+This documentation describes module revision $Revision: 1.68 $.
 
 
 This is alpha test level software
@@ -129,14 +138,14 @@ our %CHECKBOX_ARGS = (
 
 =head3 $CHECKSUM_SALT
 
-    $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
+    $CHECKSUM_SALT = join ' ', __PACKAGE__, __LINE__;
 
 Default hashing salt used by gen_hidden_checksum().
 Caller should set this value after use'ing this module.
 
 =cut
 
-our $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
+our $CHECKSUM_SALT = join ' ', __PACKAGE__, __LINE__;
 
 #----------------------------------------------------------------------
 
@@ -428,20 +437,6 @@ sub _assert_positional_argument_n_must_be_parameter_name
 
 #======================================================================
 
-sub _assert_positional_argument_n_must_be_wholenumber
-{
-    # my ($n, $ra_args) = @_;
-
-    confess join(' ',
-	"ERROR: positional argument $_[0] must be whole number",
-	Data::Dumper->Dump([\@_], [qw(*_)])
-    ) unless is_wholenumber $_[1]->[$_[0]];
-    
-    return 1;
-}
-
-#======================================================================
-
 sub _assert_positional_argument_n_must_be_regexpref
 {
     # my ($n, $ra_args) = @_;
@@ -451,6 +446,34 @@ sub _assert_positional_argument_n_must_be_regexpref
 	'regular expression reference',
 	Data::Dumper->Dump([\@_], [qw(*_)])
     ) unless is_regexpref $_[1]->[$_[0]];
+    
+    return 1;
+}
+
+#======================================================================
+
+sub _assert_positional_argument_n_must_be_nonempty_string
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be string",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_nonempty_string $_[1]->[$_[0]];
+    
+    return 1;
+}
+
+#======================================================================
+
+sub _assert_positional_argument_n_must_be_wholenumber
+{
+    # my ($n, $ra_args) = @_;
+
+    confess join(' ',
+	"ERROR: positional argument $_[0] must be whole number",
+	Data::Dumper->Dump([\@_], [qw(*_)])
+    ) unless is_wholenumber $_[1]->[$_[0]];
     
     return 1;
 }
@@ -579,6 +602,121 @@ sub _merge_attr
 
 #======================================================================
 
+sub _test_a_exclusive
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    # my($name, $ra_values, $hostportpath, $ra_query) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(0, \@_);
+    _assert_positional_argument_n_must_be_arrayref(1, \@_);
+    _assert_positional_argument_n_must_be_nonempty_string(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(3, \@_);
+
+    my @html = (
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+    		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' is required (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=' . $_[1][-1],
+		    $_[0] . '=' . $_[1][-2],
+    		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' must have single value (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=BEL%07',
+    		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' must contain valid characters (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+	    	    $_[0] . '=123456789 ',
+    		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' must contain valid value (ERROR)",
+	),
+    );
+
+    ddump('return', [\@html], [qw(*html)]) if DEBUG;
+    return @html;
+}
+
+#======================================================================
+
+sub _test_a_textual
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($name, $hostportpath, $ra_query, $maxlength) = @_;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(0, \@_);
+    _assert_positional_argument_n_must_be_nonempty_string(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
+    _assert_positional_argument_n_must_be_wholenumber(3, \@_);
+
+    my @html = (
+	a(
+	    { -href => $_[1] . '?' . join('&', @{$_[2]}) },
+	    "parameter '$_[0]' " .
+	    'is required (ERROR)',
+	),
+	a(
+    	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=' . '1',
+		    $_[0] . '=' . '2',
+	    	    @{$_[2]},
+		)
+	    },
+	    "parameter '$_[0]' " .
+	    'must have single value (ERROR)',
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=BEL%07',
+		    @{$_[2]},
+		)
+	    },
+	    "parameter '$_[0]' " .
+	    'must contain valid characters (ERROR)',
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=' . '123456789%20' x
+			($_[3]/10 + 1),
+		    @{$_[2]},
+    		)
+  	    },
+	    "parameter '$_[0]' " .
+	    'length must be n characters or less (ERROR)',
+	),
+    );
+
+    ddump('return', [\@html], [qw(*html)]) if DEBUG;
+    return @html;
+}
+
+#======================================================================
+
 sub _untaint_checksum
 {
     dprint('passing through call to _untaint_regexp()') if DEBUG;
@@ -655,6 +793,62 @@ sub _validate_checksum
 
 	$r = $uvalue;
 	ddump([$r], [qw(r)]) if DEBUG;
+    }
+
+  DONE:
+
+    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
+    return $r;
+}
+
+#======================================================================
+
+sub _validate_exclusive
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    # my ($ra_errors, $name, $ra_choices, $rc_untaint) = @_;a
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
+    _assert_positional_argument_n_must_be_coderef(3, \@_);
+
+    my $r;
+
+    goto DONE unless param;
+
+    my @values = param($_[1]);
+    ddump([\@values], [qw(*values)]) if DEBUG;
+
+    my $uvalue;
+
+    if (scalar @values) {
+
+        _validate_parameter_must_have_single_value(
+	    @_[0, 1], \@values 
+	) or goto DONE;
+
+        $uvalue = $_[3]->($values[0]);
+	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
+
+        _validate_parameter_must_contain_valid_characters(
+	    @_[0, 1], $values[0], $uvalue
+	) or goto DONE; 
+
+	unless (grep {$uvalue eq $_} @{$_[2]}) {
+	    push @{$_[0]}, join(' ',
+		"ERROR: parameter '$_[1]' must contain valid value",
+	    );
+	    goto DONE;
+	}
+
+	$r = $uvalue;
+	ddump([$r], [qw(r)]) if DEBUG;
+    }
+    else {
+	_error_parameter_is_required @_[0, 1];
     }
 
   DONE:
@@ -1250,6 +1444,382 @@ sub nbsp
 
 #======================================================================
 
+=head3 test_a_checkbox
+
+    push @html, test_a_checkbox(NAME, HOSTPORTPATH, RA_QUERY);
+
+    # NAME the name of the checkbox parameter
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing checkbox parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_checkbox
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(0, \@_);
+    _assert_positional_argument_n_must_be_nonempty_string(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
+
+    my @html = (
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=1',
+		    $_[0] . '=2',
+		    @{$_[2]},
+		),
+	    },
+	    "parameter '$_[0]' must have single value (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=BEL%07',
+		    @{$_[2]},
+		),
+	    },
+	    "parameter '$_[0]' must contain valid characters (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+		    $_[0] . '=123456789 ',
+		    @{$_[2]},
+		),
+	    },
+	    "parameter '$_[0]' must contain valid value (ERROR)",
+	),
+    );
+
+    ddump('return', [\@html], [qw(*html)]) if DEBUG;
+    return @html;
+}
+
+#======================================================================
+
+=head3 test_a_hidden
+
+    push @html, test_a_hidden(NAME, RA_VALUES, HOSTPORTPATH, RA_QUERY);
+
+    # NAME the name of the hidden parameter
+
+    # RA_VALUES array containing known good value(s)
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing hidden parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_hidden
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+    _assert_positional_argument_n_must_be_parameter_name(0, \@_);
+    _assert_positional_argument_n_must_be_arrayref(1, \@_);
+    _assert_positional_argument_n_must_be_nonempty_string(2, \@_);
+    _assert_positional_argument_n_must_be_arrayref(3, \@_);
+
+    my @nv;
+    foreach (@{$_[1]}) {
+	push @nv, join('=', $_[0], $_);
+    }
+
+    my $nx = $_[0] . '_ck';
+    my $md5 = _calc_checksum(
+	-name => $_[0],
+      	-value => $_[1],
+    );
+    my $nxmd5 = "$nx=$md5";
+
+    my @html = (
+	a(
+	    {
+		-href => $_[2] . '?' . join('&',
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' is required (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[2] . '?' . join('&',
+		    @nv,
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$nx' is required",
+	    "parameter '$_[0]' checksum missing",
+	    '(ERROR)',
+	),
+	a(
+	    {
+		-href => $_[2] . '?' .  join('&',
+		    "$nx=BEL%07",
+		    @nv,
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$nx' must contain valid characters",
+	    "parameter '$_[0]' checksum bad",
+	    '(ERROR)',
+	),
+	a(
+	    {
+		-href => $_[2] . '?' . join('&',
+		    "$nx=0123456789abcdef0123456789abcdef0",
+		    @nv,
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$nx' length must be exactly n characters",
+	    "parameter '$_[0] checksum bad",
+	    '(ERROR)',
+	),
+	a(
+	    {
+		-href => $_[2] . '?' . join('&',
+		    "$_[0]=BEL%07",
+		    $nxmd5,
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' must contain valid characters (ERROR)",
+	),
+	a(
+	    {
+		-href => $_[2] . '?' .  join('&',
+		    "$nx=0123456789abcdef0123456789abcdef",
+		    @nv,
+		    @{$_[3]},
+		),
+	    },
+	    "parameter '$_[0]' checksum bad (ERROR)",
+	),
+    );
+
+    ddump('return', [\@html], [qw(*html)]) if DEBUG;
+    return @html;
+}
+
+#======================================================================
+
+=head3 test_a_password_field
+
+    push @html, test_a_password_field(NAME, HOSTPORTPATH, RA_QUERY);
+
+    # NAME the name of the password_field parameter
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing password_field parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_password_field
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+
+    dprint 'passing through call to _test_a_textual' if DEBUG;
+    return _test_a_textual(@_, $PASSWORD_FIELD_ARGS{-maxlength});
+}
+
+#======================================================================
+
+=head3 test_a_popup
+
+    push @html, test_a_popup(
+	NAME, RA_CHOICES, HOSTPORTPATH, RA_QUERY
+    );
+
+    # NAME the name of the popup parameter
+
+    # RA_CHOICES reference to array of valid choices
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing radio group parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_popup
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+
+    dprint('passing through call to _test_a_exclusive') if DEBUG;
+    return _test_a_exclusive(@_);
+}
+
+#======================================================================
+
+=head3 test_a_radio_group
+
+    push @html, test_a_radio_group(
+	NAME, RA_CHOICES, HOSTPORTPATH, RA_QUERY
+    );
+
+    # NAME the name of the radio_group parameter
+
+    # RA_CHOICES reference to array of valid choices
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing radio group parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_radio_group
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(4, \@_);
+
+    dprint('passing through call to _test_a_exclusive') if DEBUG;
+    return _test_a_exclusive(@_);
+}
+
+#======================================================================
+
+=head3 test_a_required
+
+    push @html, test_a_required(
+	RA_NAMES, HOSTPORTPATH, RA_QUERY
+    );
+
+    # RA_NAMES reference to array of required parameters
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML element
+for testing required parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+sub test_a_required
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    # my($ra_names, $hostportpath, $ra_query) = @_;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+    _assert_positional_argument_n_must_be_arrayref(0, \@_);
+    _assert_positional_argument_n_must_be_nonempty_string(1, \@_);
+    _assert_positional_argument_n_must_be_arrayref(2, \@_);
+
+    my @html = (
+	a(
+	    {
+		-href => $_[1] . '?' . join('&',
+    		    @{$_[2]},
+		),
+	    },
+	    (map {"parameter '$_' is required"} @{$_[0]}),
+	    '(ERROR)',
+	),
+    );
+
+    ddump('return', [\@html], [qw(*html)]) if DEBUG;
+    return @html;
+}
+
+#======================================================================
+
+=head3 test_a_textarea
+
+    push @html, test_a_textarea(NAME, HOSTPORTPATH, RA_QUERY);
+
+    # NAME the name of the textarea parameter
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing textarea parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_textarea
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+
+    dprint 'passing through call to _test_a_textual' if DEBUG;
+    return _test_a_textual(@_, $TEXTAREA_ARGS{-maxlength});
+}
+
+#======================================================================
+
+=head3 test_a_textfield
+
+    push @html, test_a_textfield(NAME, HOSTPORTPATH, RA_QUERY);
+
+    # NAME the name of the textfield parameter
+
+    # HOSTPORTPATH the URL host, port, and/or path
+
+    # RA_QUERY URL query name and value pairs
+
+Generates anchor HTML elements
+for testing textfield parameters.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub test_a_textfield
+{
+    ddump('call', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+
+    dprint 'passing through call to _test_a_textual' if DEBUG;
+    return _test_a_textual(@_, $TEXTFIELD_ARGS{-maxlength});
+}
+
+#======================================================================
+
 =head3 untaint_checkbox
 
     my @untainted = untaint_checkbox(LIST);
@@ -1625,7 +2195,7 @@ sub validate_required
 
     foreach (@_[1 .. $#_]) {
 	my @v = param($_);
-	unless (0 < scalar @v) {
+	unless (0 < scalar @v && 0 < length $v[0]) {
 	    _error_parameter_is_required($_[0], $_);
 	    $r = undef;
 	}
@@ -1675,6 +2245,48 @@ sub validate_password_field
 
 #======================================================================
 
+=head3 validate_popup
+
+    my $v = validate_popup(RA_ERRORS, NAME, RA_VALUES);
+
+    # RA_ERRORS is reference to array of error messages
+
+    # NAME is a CGI parameter nameo
+
+    # RA_VALUES is reference to array of allowed values
+
+Untaints, validates, and returns popup CGI parameter NAME --
+is required,
+must have single value,
+must contain valid characters (calls untaint_popup()),
+and must contain valid value (be in @RA_VALUES).
+If any problems are found,
+pushes error messages onto @RA_ERRORS
+and returns undef.
+
+Returns undef if no CGI parameters exist (e.g. fresh hit).
+
+Calls Carp::confess() on error.
+
+=cut
+
+#----------------------------------------------------------------------
+
+sub validate_popup
+{
+    ddump('enter', [\@_], [qw(*_)]) if DEBUG;
+
+    _assert_requires_exactly_n_arguments(3, \@_);
+
+    dprint('passing through call to _validate_exclusive()')
+	if DEBUG;
+    return _validate_exclusive(
+	@_, \&untaint_popup
+    );
+}
+
+#======================================================================
+
 =head3 validate_radio_group
 
     my $v = validate_radio_group(RA_ERRORS, NAME, RA_VALUES);
@@ -1707,50 +2319,12 @@ sub validate_radio_group
     ddump('enter', [\@_], [qw(*_)]) if DEBUG;
 
     _assert_requires_exactly_n_arguments(3, \@_);
-    _assert_positional_argument_n_must_be_arrayref(0, \@_);
-    _assert_positional_argument_n_must_be_parameter_name(1, \@_);
-    _assert_positional_argument_n_must_be_arrayref(2, \@_);
 
-    my $r;
-
-    goto DONE unless param;
-
-    my @values = param($_[1]);
-    ddump([\@values], [qw(*values)]) if DEBUG;
-
-    my $uvalue;
-
-    if (scalar @values) {
-
-        _validate_parameter_must_have_single_value(
-	    @_[0, 1], \@values 
-	) or goto DONE;
-
-        $uvalue = untaint_radio_group($values[0]);
-	ddump([$uvalue], [qw(uvalue)]) if DEBUG;
-
-        _validate_parameter_must_contain_valid_characters(
-	    @_[0, 1], $values[0], $uvalue
-	) or goto DONE; 
-
-	unless (grep {$uvalue eq $_} @{$_[2]}) {
-	    push @{$_[0]}, join(' ',
-		"ERROR: parameter '$_[1]' must contain valid value",
-	    );
-	    goto DONE;
-	}
-
-	$r = $uvalue;
-	ddump([$r], [qw(r)]) if DEBUG;
-    }
-    else {
-	_error_parameter_is_required @_[0, 1];
-    }
-
-  DONE:
-
-    ddump('return', [$_[0], $r], [qw(_[0] r)]) if DEBUG;
-    return $r;
+    dprint('passing through call to _validate_exclusive()')
+	if DEBUG;
+    return _validate_exclusive(
+	@_, \&untaint_radio_group
+    );
 }
 
 #======================================================================

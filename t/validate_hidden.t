@@ -1,34 +1,36 @@
 #! /usr/bin/perl -T
 #######################################################################
-# $Id: validate_hidden.t,v 1.4 2010-12-14 05:53:13 dpchrist Exp $
+# $Id: validate_hidden.t,v 1.6 2010-12-20 06:05:21 dpchrist Exp $
 #
 # Test script for validate_hidden().
 #
 # Copyright 2010 by David Paul Christensen dpchrist@holgerdanske.com
 #######################################################################
 
-use Test::More tests => 8;
-
 use strict;
 use warnings;
 
-use Carp;
-use CGI				qw( :standard );
-use Data::Dumper;
+use Test::More tests => 8;
+
 use Dpchrist::CGI		qw(
     _calc_checksum
     dump_params
     validate_hidden
 );
 
+use Carp;
+use CGI				qw( :standard );
+use Data::Dumper;
+use File::Basename;
+
 $| 				= 1;
 $Data::Dumper::Sortkeys 	= 1;
 
 my ($r, @r);
 my @e;
-my $n   = __FILE__ . __LINE__;
+my $n   = basename(__FILE__) . __LINE__;
 my $nx  = $n . '_ck';
-my $v   = __FILE__ . __LINE__;
+my $v   = basename(__FILE__) . __LINE__;
 my @a   = (-name => $n, -value => $v);
 my $md5 = _calc_checksum(@a);
 
@@ -107,7 +109,7 @@ ok (								#     6
 
 $r = eval {
     @e = ();
-    param($nx, __FILE__ . __LINE__);
+    param($nx, basename(__FILE__) . __LINE__);
     validate_hidden \@e, $n;
 };
 ok (								#     7

@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: untaint_textarea.t,v 1.4 2010-12-02 19:17:02 dpchrist Exp $
+# $Id: untaint_textarea.t,v 1.6 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::untaint_textarea().
 #
@@ -16,6 +16,7 @@ use Dpchrist::CGI			qw( untaint_textarea );
 use Capture::Tiny			qw ( capture );
 use Carp;
 use Data::Dumper;
+use File::Basename;
 
 $|					= 1;
 $Data::Dumper::Sortkeys			= 1;
@@ -24,9 +25,9 @@ my ($r, @r, $s);
 my ($stdout, $stderr);
 
 my $good = join("\n",
-    __FILE__ . __LINE__,
-    __FILE__ . __LINE__,
-    __FILE__ . __LINE__,
+    basename(__FILE__) . __LINE__,
+    basename(__FILE__) . __LINE__,
+    basename(__FILE__) . __LINE__,
 );
 
 my $bad;

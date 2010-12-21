@@ -2,7 +2,7 @@ NAME
     Dpchrist::CGI - utility subroutines for CGI scripts
 
 DESCRIPTION
-    This documentation describes module revision $Revision: 1.62 $.
+    This documentation describes module revision $Revision: 1.68 $.
 
     This is alpha test level software and may change or disappear at any
     time.
@@ -16,7 +16,7 @@ DESCRIPTION
     Default argments used by gen_checkbox().
 
    $CHECKSUM_SALT
-        $CHECKSUM_SALT = join ' ', __PACKAGE__, __FILE__, __LINE__;
+        $CHECKSUM_SALT = join ' ', __PACKAGE__, __LINE__;
 
     Default hashing salt used by gen_hidden_checksum(). Caller should set
     this value after use'ing this module.
@@ -244,6 +244,106 @@ DESCRIPTION
 
     Calls Carp::confess() on error.
 
+   test_a_checkbox
+        push @html, test_a_checkbox(NAME, HOSTPORTPATH, RA_QUERY);
+
+        # NAME the name of the checkbox parameter
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing checkbox parameters.
+
+   test_a_hidden
+        push @html, test_a_hidden(NAME, RA_VALUES, HOSTPORTPATH, RA_QUERY);
+
+        # NAME the name of the hidden parameter
+
+        # RA_VALUES array containing known good value(s)
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing hidden parameters.
+
+   test_a_password_field
+        push @html, test_a_password_field(NAME, HOSTPORTPATH, RA_QUERY);
+
+        # NAME the name of the password_field parameter
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing password_field parameters.
+
+   test_a_popup
+        push @html, test_a_popup(
+            NAME, RA_CHOICES, HOSTPORTPATH, RA_QUERY
+        );
+
+        # NAME the name of the popup parameter
+
+        # RA_CHOICES reference to array of valid choices
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing radio group parameters.
+
+   test_a_radio_group
+        push @html, test_a_radio_group(
+            NAME, RA_CHOICES, HOSTPORTPATH, RA_QUERY
+        );
+
+        # NAME the name of the radio_group parameter
+
+        # RA_CHOICES reference to array of valid choices
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing radio group parameters.
+
+   test_a_required
+        push @html, test_a_required(
+            RA_NAMES, HOSTPORTPATH, RA_QUERY
+        );
+
+        # RA_NAMES reference to array of required parameters
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML element for testing required parameters.
+
+   test_a_textarea
+        push @html, test_a_textarea(NAME, HOSTPORTPATH, RA_QUERY);
+
+        # NAME the name of the textarea parameter
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing textarea parameters.
+
+   test_a_textfield
+        push @html, test_a_textfield(NAME, HOSTPORTPATH, RA_QUERY);
+
+        # NAME the name of the textfield parameter
+
+        # HOSTPORTPATH the URL host, port, and/or path
+
+        # RA_QUERY URL query name and value pairs
+
+    Generates anchor HTML elements for testing textfield parameters.
+
    untaint_checkbox
         my @untainted = untaint_checkbox(LIST);
 
@@ -364,6 +464,25 @@ DESCRIPTION
     untaint_password_field()), and length must be n characters or less
     (compares to $PASSWORD_FIELD_ARGS{-maxlength}). If any problems found,
     pushes error messages onto @RA_ERRORS and returns undef.
+
+    Calls Carp::confess() on error.
+
+   validate_popup
+        my $v = validate_popup(RA_ERRORS, NAME, RA_VALUES);
+
+        # RA_ERRORS is reference to array of error messages
+
+        # NAME is a CGI parameter nameo
+
+        # RA_VALUES is reference to array of allowed values
+
+    Untaints, validates, and returns popup CGI parameter NAME -- is
+    required, must have single value, must contain valid characters (calls
+    untaint_popup()), and must contain valid value (be in @RA_VALUES). If
+    any problems are found, pushes error messages onto @RA_ERRORS and
+    returns undef.
+
+    Returns undef if no CGI parameters exist (e.g. fresh hit).
 
     Calls Carp::confess() on error.
 

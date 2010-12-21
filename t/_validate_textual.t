@@ -1,5 +1,5 @@
 #######################################################################
-# $Id: _validate_textual.t,v 1.5 2010-12-13 06:10:53 dpchrist Exp $
+# $Id: _validate_textual.t,v 1.7 2010-12-20 06:05:20 dpchrist Exp $
 #
 # Test script for Dpchrist::CGI::_validate_textual().
 #
@@ -18,6 +18,7 @@ use Dpchrist::CGI		qw( _validate_textual
 use Carp;
 use CGI				qw( :standard );
 use Data::Dumper;
+use File::Basename;
 
 $|				= 1;
 $Data::Dumper::Sortkeys		= 1;
@@ -25,7 +26,7 @@ $Data::Dumper::Sortkeys		= 1;
 
 my @e;
 my $rc = sub { return shift };
-my $n = __FILE__ . __LINE__;
+my $n = basename(__FILE__) . __LINE__;
 my $m = 80;
 
 my $r;
@@ -83,8 +84,8 @@ ok(								#     5
 
 $r = eval {
     param($n,
-	__FILE__ . __LINE__,
-	__FILE__ . __LINE__,
+	basename(__FILE__) . __LINE__,
+	basename(__FILE__) . __LINE__,
     );
     _validate_textual \@e, $n, $rc, $m;
 };
@@ -102,7 +103,7 @@ ok(								#     6
 
 $r = eval {
     @e = ();
-    param($n, __FILE__ . __LINE__);
+    param($n, basename(__FILE__) . __LINE__);
     _validate_textual \@e, $n, sub { return }, $m;
 };
 ok(								#     7
@@ -119,7 +120,7 @@ ok(								#     7
 
 $r = eval {
     @e = ();
-    param($n, __FILE__ . __LINE__);
+    param($n, basename(__FILE__) . __LINE__);
     _validate_textual \@e, $n, $rc, 1;
 };
 ok(								#     8
@@ -136,7 +137,7 @@ ok(								#     8
 
 $r = eval {
     @e = ();
-    $s = __FILE__ . __LINE__;
+    $s = basename(__FILE__) . __LINE__;
     param($n, $s);
     _validate_textual \@e, $n, $rc, $m;
 };
